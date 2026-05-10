@@ -24,9 +24,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		65CD77282FA9DC61001199B6 /* POV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = POV.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		65CD77352FA9DC62001199B6 /* POVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = POVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		65CD773F2FA9DC62001199B6 /* POVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = POVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		65CD77282FA9DC61001199B6 /* POV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = POV.app; path = "/Users/fay/Desktop/POV/build/Debug-iphoneos/POV.app"; sourceTree = "<absolute>"; };
+		65CD77352FA9DC62001199B6 /* POVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = POVTests.xctest; path = "/Users/fay/Desktop/POV/build/Debug-iphoneos/POV.app/PlugIns/POVTests.xctest"; sourceTree = "<absolute>"; };
+		65CD773F2FA9DC62001199B6 /* POVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = POVUITests.xctest; path = "/Users/fay/Desktop/POV/build/Debug-iphoneos/POVUITests-Runner.app/PlugIns/POVUITests.xctest"; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -43,6 +43,31 @@
 		65CD77422FA9DC62001199B6 /* POVUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = POVUITests;
+			sourceTree = "<group>";
+		};
+		65CD77522FB07EC1001199B6 /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Models;
+			sourceTree = "<group>";
+		};
+		65CD77542FB07EDD001199B6 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		65CD77562FB07F17001199B6 /* Services */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Services;
+			sourceTree = "<group>";
+		};
+		65CD77572FB07F45001199B6 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		65CD77592FB07F5F001199B6 /* Views */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,21 +100,15 @@
 		65CD771F2FA9DC61001199B6 = {
 			isa = PBXGroup;
 			children = (
+				65CD77592FB07F5F001199B6 /* Views */,
+				65CD77572FB07F45001199B6 /* ViewModels */,
+				65CD77522FB07EC1001199B6 /* Models */,
 				65CD772A2FA9DC61001199B6 /* POV */,
 				65CD77382FA9DC62001199B6 /* POVTests */,
+				65CD77542FB07EDD001199B6 /* Resources */,
 				65CD77422FA9DC62001199B6 /* POVUITests */,
-				65CD77292FA9DC61001199B6 /* Products */,
+				65CD77562FB07F17001199B6 /* Services */,
 			);
-			sourceTree = "<group>";
-		};
-		65CD77292FA9DC61001199B6 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				65CD77282FA9DC61001199B6 /* POV.app */,
-				65CD77352FA9DC62001199B6 /* POVTests.xctest */,
-				65CD773F2FA9DC62001199B6 /* POVUITests.xctest */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -109,6 +128,10 @@
 			);
 			fileSystemSynchronizedGroups = (
 				65CD772A2FA9DC61001199B6 /* POV */,
+				65CD77522FB07EC1001199B6 /* Models */,
+				65CD77562FB07F17001199B6 /* Services */,
+				65CD77572FB07F45001199B6 /* ViewModels */,
+				65CD77592FB07F5F001199B6 /* Views */,
 			);
 			name = POV;
 			packageProductDependencies = (
@@ -155,6 +178,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				65CD77422FA9DC62001199B6 /* POVUITests */,
+				65CD77542FB07EDD001199B6 /* Resources */,
 			);
 			name = POVUITests;
 			packageProductDependencies = (
@@ -196,7 +220,7 @@
 			mainGroup = 65CD771F2FA9DC61001199B6;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 65CD77292FA9DC61001199B6 /* Products */;
+			productRefGroup = 65CD771F2FA9DC61001199B6;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
