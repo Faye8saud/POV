@@ -24,9 +24,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		65CD77282FA9DC61001199B6 /* POV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = POV.app; path = "/Users/fay/Desktop/POV/build/Debug-iphoneos/POV.app"; sourceTree = "<absolute>"; };
-		65CD77352FA9DC62001199B6 /* POVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = POVTests.xctest; path = "/Users/fay/Desktop/POV/build/Debug-iphoneos/POV.app/PlugIns/POVTests.xctest"; sourceTree = "<absolute>"; };
-		65CD773F2FA9DC62001199B6 /* POVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = POVUITests.xctest; path = "/Users/fay/Desktop/POV/build/Debug-iphoneos/POVUITests-Runner.app/PlugIns/POVUITests.xctest"; sourceTree = "<absolute>"; };
+		89D3D8EA2FB08069004EC09F /* POV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = POV.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		89D3D8EB2FB08069004EC09F /* POVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = POVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		89D3D8EC2FB08069004EC09F /* POVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = POVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -108,6 +108,9 @@
 				65CD77542FB07EDD001199B6 /* Resources */,
 				65CD77422FA9DC62001199B6 /* POVUITests */,
 				65CD77562FB07F17001199B6 /* Services */,
+				89D3D8EA2FB08069004EC09F /* POV.app */,
+				89D3D8EB2FB08069004EC09F /* POVTests.xctest */,
+				89D3D8EC2FB08069004EC09F /* POVUITests.xctest */,
 			);
 			sourceTree = "<group>";
 		};
@@ -137,7 +140,7 @@
 			packageProductDependencies = (
 			);
 			productName = POV;
-			productReference = 65CD77282FA9DC61001199B6 /* POV.app */;
+			productReference = 89D3D8EA2FB08069004EC09F /* POV.app */;
 			productType = "com.apple.product-type.application";
 		};
 		65CD77342FA9DC62001199B6 /* POVTests */ = {
@@ -160,7 +163,7 @@
 			packageProductDependencies = (
 			);
 			productName = POVTests;
-			productReference = 65CD77352FA9DC62001199B6 /* POVTests.xctest */;
+			productReference = 89D3D8EB2FB08069004EC09F /* POVTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		65CD773E2FA9DC62001199B6 /* POVUITests */ = {
@@ -184,7 +187,7 @@
 			packageProductDependencies = (
 			);
 			productName = POVUITests;
-			productReference = 65CD773F2FA9DC62001199B6 /* POVUITests.xctest */;
+			productReference = 89D3D8EC2FB08069004EC09F /* POVUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
