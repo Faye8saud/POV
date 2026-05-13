@@ -1,0 +1,464 @@
+{
+  "moods": [
+    {
+      "name": "Tender",
+      "description": "soft edges, warm light, quiet attention",
+      "color": "#C4798A",
+      "accentColor": "#F2B5C0",
+      "directors": [
+        {
+          "name": "Sofia Coppola",
+          "nationality": "American",
+          "styleDescription": "Dreamy, slow, intimate. She films loneliness as something beautiful. Distance between people, silence, golden-hour light.",
+          "imageName": "director_sofia_coppola",
+          "shootingPrompts": [
+            "Film yourself from far away — don't zoom in",
+            "Look for light that makes ordinary things look like memories",
+            "Capture a moment of waiting or stillness",
+            "Let silence be part of the scene"
+          ],
+          "tags": [
+            "slow",
+            "intimate",
+            "nostalgic",
+            "feminine gaze"
+          ],
+          "brief": "Look for the light that makes ordinary things feel like memories. Stay far away. Let silence be part of the frame.",
+          "question1": "Did you find a moment today that already felt like a memory?",
+          "question2": "What was the quietest part of your day, and what was happening in it?"
+        },
+        {
+          "name": "Wong Kar-wai",
+          "nationality": "Hong Kong",
+          "styleDescription": "Blurred motion, saturated color, longing. He films time passing and emotion that goes unexpressed.",
+          "imageName": "director_wong_kar_wai",
+          "shootingPrompts": [
+            "Use slow motion on something mundane",
+            "Film reflections — mirrors, windows, puddles",
+            "Find a color in your day and let it dominate the frame",
+            "Capture someone from behind or at a distance"
+          ],
+          "tags": [
+            "longing",
+            "color",
+            "blur",
+            "poetic"
+          ],
+          "brief": "Find one color that belongs to today, and let it follow you. Watch the world slow down, even when it shouldn't.",
+          "question1": "Was there something today you felt but didn't say out loud?",
+          "question2": "If today had a color, what was it, and why?"
+        },
+        {
+          "name": "Hirokazu Kore-eda",
+          "nationality": "Japanese",
+          "styleDescription": "Quiet observation of everyday family life. He finds meaning in routine gestures and unspoken love.",
+          "imageName": "director_hirokazu_kore_eda",
+          "shootingPrompts": [
+            "Film a meal, or someone preparing food",
+            "Capture a habit — something you do without thinking",
+            "Look for small acts of care between people",
+            "Film someone doing something ordinary, from a respectful distance"
+          ],
+          "tags": [
+            "family",
+            "routine",
+            "quiet",
+            "observational"
+          ],
+          "brief": "Notice the small acts of care between people — yours, theirs. The meaning is in what is done, not in what is said.",
+          "question1": "Did someone care for you today, even in a small way?",
+          "question2": "What ordinary thing did you do today that someone, somewhere, would have called love?"
+        },
+        {
+          "name": "Céline Sciamma",
+          "nationality": "French",
+          "styleDescription": "Precise, tender, and politically aware. She films looking — who watches, who is seen, what that means.",
+          "imageName": "director_celine_sciamma",
+          "shootingPrompts": [
+            "Film yourself or someone looking at something",
+            "Notice a moment of being seen or unseen",
+            "Find a small detail that tells a whole story",
+            "Capture eye contact, or the absence of it"
+          ],
+          "tags": [
+            "gaze",
+            "tenderness",
+            "precise",
+            "feminist"
+          ],
+          "brief": "Pay attention to who you looked at today, and who looked at you. Let one small detail tell the whole story.",
+          "question1": "Did you feel truly seen by someone today?",
+          "question2": "Who or what caught your eye today, and what did you not say about it?"
+        }
+      ]
+    },
+    {
+      "name": "Restless",
+      "description": "close, unsettled, vivid, searching",
+      "color": "#5C6BC0",
+      "accentColor": "#9FA8DA",
+      "directors": [
+        {
+          "name": "Darren Aronofsky",
+          "nationality": "American",
+          "styleDescription": "Visceral, claustrophobic, obsessive. He puts the camera close — inside the experience, not watching it.",
+          "imageName": "director_darren_aronofsky",
+          "shootingPrompts": [
+            "Film extreme close-ups of hands, eyes, objects",
+            "Use handheld — let the camera breathe with you",
+            "Capture repetition — something done over and over",
+            "Film from an uncomfortable angle"
+          ],
+          "tags": [
+            "obsession",
+            "close-up",
+            "visceral",
+            "handheld"
+          ],
+          "brief": "Get close. Notice what your hands kept doing today, what you kept returning to. Let the camera breathe with you.",
+          "question1": "Did you keep doing something today without quite knowing why?",
+          "question2": "What were you doing when you weren't doing anything?"
+        },
+        {
+          "name": "Lynne Ramsay",
+          "nationality": "Scottish",
+          "styleDescription": "Fragmented, poetic, trauma-adjacent. She films the interior world through exterior details — what objects carry.",
+          "imageName": "director_lynne_ramsay",
+          "shootingPrompts": [
+            "Find an object that holds a feeling today",
+            "Film texture — surfaces, fabric, skin, walls",
+            "Capture something broken, worn, or imperfect",
+            "Let the frame be incomplete — cut off heads, cut off hands"
+          ],
+          "tags": [
+            "fragmented",
+            "poetic",
+            "texture",
+            "interior"
+          ],
+          "brief": "Find an object today that holds a feeling you haven't named. Let the frame stay incomplete.",
+          "question1": "Did something small carry more weight today than it should have?",
+          "question2": "What stayed with you longer than it should have today, and where did it come from?"
+        },
+        {
+          "name": "Xavier Dolan",
+          "nationality": "Canadian",
+          "styleDescription": "Emotional, dramatic, personal. He films big feelings in confined spaces — confrontation, longing, identity.",
+          "imageName": "director_xavier_dolan",
+          "shootingPrompts": [
+            "Film a conversation — even if it's one-sided",
+            "Use slow motion on an emotional moment",
+            "Let music play while you film — feel the contrast",
+            "Film yourself or someone mid-feeling, not explaining it"
+          ],
+          "tags": [
+            "emotional",
+            "dramatic",
+            "personal",
+            "music-driven"
+          ],
+          "brief": "Don't explain the feeling. Let it be loud, even if no one else can see it. Film the moment, not the reason.",
+          "question1": "Did you feel something today that was bigger than the moment that caused it?",
+          "question2": "What did you almost say today, and to whom?"
+        },
+        {
+          "name": "Park Chan-wook",
+          "nationality": "South Korean",
+          "styleDescription": "Precise, unsettling, visually controlled. He films tension through symmetry and unexpected stillness.",
+          "imageName": "director_park_chan_wook",
+          "shootingPrompts": [
+            "Look for symmetry in your environment",
+            "Film something that feels slightly wrong or off",
+            "Use a very still shot of something that should be moving",
+            "Find beauty in an uncomfortable place"
+          ],
+          "tags": [
+            "symmetry",
+            "tension",
+            "controlled",
+            "unsettling"
+          ],
+          "brief": "Find something that feels slightly off today. Stay in the discomfort. Look at it longer than feels right.",
+          "question1": "Did something feel a little wrong today, even if you couldn't say why?",
+          "question2": "What did you choose not to look at today?"
+        }
+      ]
+    },
+    {
+      "name": "Wandering",
+      "description": "curious, open, unhurried, drifting",
+      "color": "#66897A",
+      "accentColor": "#A8C5B5",
+      "directors": [
+        {
+          "name": "Agnès Varda",
+          "nationality": "French",
+          "styleDescription": "Curious, warm, playful. She films the world like she just discovered it — especially what others walk past.",
+          "imageName": "director_agn_s_varda",
+          "shootingPrompts": [
+            "Film something small that no one else noticed today",
+            "Follow your curiosity — film whatever pulls your eye",
+            "Capture a stranger's world without disturbing it",
+            "Find something that makes you want to ask a question"
+          ],
+          "tags": [
+            "curious",
+            "warm",
+            "discovery",
+            "street"
+          ],
+          "brief": "Follow your curiosity. Stop where it pulls you. Film what others walked past without noticing.",
+          "question1": "Did you go somewhere today just because you were curious?",
+          "question2": "What surprised you today, even briefly?"
+        },
+        {
+          "name": "Richard Linklater",
+          "nationality": "American",
+          "styleDescription": "Conversational, real-time, unhurried. He films time passing through people talking and being together.",
+          "imageName": "director_richard_linklater",
+          "shootingPrompts": [
+            "Film a real conversation, or record yourself talking to camera",
+            "Capture a transition — leaving somewhere, arriving somewhere",
+            "Film the in-between moments of your day",
+            "Let the camera roll longer than feels comfortable"
+          ],
+          "tags": [
+            "dialogue",
+            "real-time",
+            "transitions",
+            "leisurely"
+          ],
+          "brief": "Stay in the in-between today. Don't rush from one thing to the next. Film a transition, not a destination.",
+          "question1": "Did you let yourself linger today, even briefly?",
+          "question2": "What was the longest conversation you had with yourself today?"
+        },
+        {
+          "name": "Wim Wenders",
+          "nationality": "German",
+          "styleDescription": "Road-like, melancholic, wide-open. He films landscapes and solitude as characters.",
+          "imageName": "director_wim_wenders",
+          "shootingPrompts": [
+            "Film a long shot of wherever you are — don't move the camera",
+            "Capture the horizon or a wide empty space",
+            "Film yourself or someone moving through space from far away",
+            "Look for signs, roads, windows — in-between spaces"
+          ],
+          "tags": [
+            "landscape",
+            "solitude",
+            "wide",
+            "melancholic"
+          ],
+          "brief": "Find a wide, open space today and let it sit. Don't fill the frame. Let the horizon do the talking.",
+          "question1": "Did you spend time alone today on purpose?",
+          "question2": "Where did your mind go when nothing was asking for it?"
+        },
+        {
+          "name": "Jim Jarmusch",
+          "nationality": "American",
+          "styleDescription": "Deadpan, slow, coolly observational. He finds dry humor and poetry in ordinary moments and waiting.",
+          "imageName": "director_jim_jarmusch",
+          "shootingPrompts": [
+            "Film a moment of waiting — don't cut away",
+            "Capture something mundane as if it's fascinating",
+            "Look for irony or absurdity in an everyday scene",
+            "Film with complete stillness — no movement, no explanation"
+          ],
+          "tags": [
+            "deadpan",
+            "slow",
+            "absurd",
+            "cool"
+          ],
+          "brief": "Find a moment of waiting today and stay in it. Let the boring part be interesting. Don't cut away.",
+          "question1": "Was there a moment of waiting today that was secretly better than the thing you were waiting for?",
+          "question2": "What's something ordinary that you saw today and quietly liked?"
+        }
+      ]
+    },
+    {
+      "name": "Charged",
+      "description": "urgent, intentional, weighted, sharp",
+      "color": "#8B6914",
+      "accentColor": "#D4A843",
+      "directors": [
+        {
+          "name": "Christopher Nolan",
+          "nationality": "British",
+          "styleDescription": "Epic, precise, time-obsessed. He films urgency and scale — even small scenes feel like they matter enormously.",
+          "imageName": "director_christopher_nolan",
+          "shootingPrompts": [
+            "Film something with a sense of countdown or deadline",
+            "Capture architecture or scale — make it feel monumental",
+            "Use cuts that feel urgent — don't linger",
+            "Film a decision point — a door, a choice, a moment before"
+          ],
+          "tags": [
+            "urgency",
+            "scale",
+            "time",
+            "monumental"
+          ],
+          "brief": "Treat today like it matters. Find the scale in small things. Capture the moment before a decision.",
+          "question1": "Did you make a decision today that quietly mattered?",
+          "question2": "What were you choosing today, even if no one else could see the choice?"
+        },
+        {
+          "name": "David Fincher",
+          "nationality": "American",
+          "styleDescription": "Cold, precise, controlled. He films systems and detail — everything is deliberate, nothing is accidental.",
+          "imageName": "director_david_fincher",
+          "shootingPrompts": [
+            "Film with extreme stillness — no shaking, no accident",
+            "Find a scene with artificial light — lamps, screens, neon",
+            "Capture order or disorder — things arranged or falling apart",
+            "Film a process — something being done step by step"
+          ],
+          "tags": [
+            "precise",
+            "cold",
+            "controlled",
+            "artificial light"
+          ],
+          "brief": "Notice what's deliberate in your day. Watch what's arranged, and what's falling apart. Stay still.",
+          "question1": "Did something today go exactly the way you planned?",
+          "question2": "What detail did you notice today that no one else would have?"
+        },
+        {
+          "name": "Denis Villeneuve",
+          "nationality": "Canadian",
+          "styleDescription": "Slow-burn intensity, vast scale, silence as weight. He films awe and dread in equal measure.",
+          "imageName": "director_denis_villeneuve",
+          "shootingPrompts": [
+            "Film something vast — sky, a building, a crowd from far",
+            "Use a very long pause before or after something happens",
+            "Capture a moment of confrontation or first contact",
+            "Find the silence in your environment and hold it"
+          ],
+          "tags": [
+            "awe",
+            "silence",
+            "vast",
+            "slow-burn"
+          ],
+          "brief": "Find the silence today and hold it. Let something be vast. Wait longer than feels comfortable.",
+          "question1": "Did you feel small today, in a good way?",
+          "question2": "What were you sitting with today that didn't have a name?"
+        },
+        {
+          "name": "Paul Thomas Anderson",
+          "nationality": "American",
+          "styleDescription": "Operatic, character-obsessed, long takes. He films people with intensity — like they're about to break or explode.",
+          "imageName": "director_paul_thomas_anderson",
+          "shootingPrompts": [
+            "Film someone's face for longer than feels normal",
+            "Capture a power dynamic — who leads, who follows",
+            "Use a slow tracking shot — follow someone walking",
+            "Film an environment that reveals character — a desk, a room"
+          ],
+          "tags": [
+            "character",
+            "long take",
+            "operatic",
+            "power"
+          ],
+          "brief": "Look at someone today longer than feels normal — yourself in a mirror, or a stranger across the room.",
+          "question1": "Did you notice someone today who was holding something in?",
+          "question2": "Who had power in your day today, and how could you tell?"
+        }
+      ]
+    },
+    {
+      "name": "Playful",
+      "description": "curious, bright, surprising, alive",
+      "color": "#6A5ACD",
+      "accentColor": "#B8A9E8",
+      "directors": [
+        {
+          "name": "Wes Anderson",
+          "nationality": "American",
+          "styleDescription": "Symmetrical, pastel, deadpan. He films life as a precisely designed world where everything is placed on purpose.",
+          "imageName": "director_wes_anderson",
+          "shootingPrompts": [
+            "Find perfect symmetry and film straight-on",
+            "Look for pastel colors or strong flat color blocks",
+            "Film a collection of objects arranged deliberately",
+            "Use a slow pan left or right — perfectly level"
+          ],
+          "tags": [
+            "symmetry",
+            "color palette",
+            "deadpan",
+            "whimsical"
+          ],
+          "brief": "Find perfect symmetry today and film it straight on. Treat ordinary things like they were placed on purpose.",
+          "question1": "Did you arrange anything today, even just a small thing on a desk?",
+          "question2": "What did you notice today that someone else designed without thinking?"
+        },
+        {
+          "name": "Michel Gondry",
+          "nationality": "French",
+          "styleDescription": "Handmade, surreal, childlike wonder. He films imagination made physical — lo-fi and magical at once.",
+          "imageName": "director_michel_gondry",
+          "shootingPrompts": [
+            "Make something in your environment look impossible",
+            "Film an everyday object as if it's magic",
+            "Use your hands or body as part of the shot",
+            "Create something — fold, stack, arrange — and film it"
+          ],
+          "tags": [
+            "handmade",
+            "surreal",
+            "lo-fi",
+            "imagination"
+          ],
+          "brief": "Make something today that didn't exist before. Even small. Even silly. Film it like it's a magic trick.",
+          "question1": "Did you make something today, even something tiny?",
+          "question2": "When did you last feel a small spark of wonder, and what set it off?"
+        },
+        {
+          "name": "Bong Joon-ho",
+          "nationality": "South Korean",
+          "styleDescription": "Genre-mixing, socially sharp, visually surprising. He films class and absurdity together — always with a twist.",
+          "imageName": "director_bong_joon_ho",
+          "shootingPrompts": [
+            "Find a contrast in your environment — rich vs worn, old vs new",
+            "Film something from an unexpected angle — from below, above",
+            "Capture a moment of social awkwardness or tension",
+            "Look for irony — something that doesn't quite fit"
+          ],
+          "tags": [
+            "contrast",
+            "social",
+            "genre-mixing",
+            "ironic"
+          ],
+          "brief": "Find a contrast today that no one else seemed to notice. Capture something from an angle that surprises you.",
+          "question1": "Did anything today feel slightly absurd in a way that made you smile?",
+          "question2": "What two things did you see today that didn't belong together?"
+        },
+        {
+          "name": "Edgar Wright",
+          "nationality": "British",
+          "styleDescription": "Rhythmic, fast, music-driven. He films editing as energy — every cut, every sound, every movement is timed.",
+          "imageName": "director_edgar_wright",
+          "shootingPrompts": [
+            "Film something to the rhythm of a song playing",
+            "Use quick cuts — film 5 seconds of 4 different things",
+            "Capture a repeated action and speed it up mentally",
+            "Find a moment where sound and image land at the same time"
+          ],
+          "tags": [
+            "rhythm",
+            "editing",
+            "music",
+            "kinetic"
+          ],
+          "brief": "Move with rhythm today. Match a beat with what you film. Let sound and image land together.",
+          "question1": "Did you find your rhythm today?",
+          "question2": "What was the soundtrack of your day, even if no music was playing?"
+        }
+      ]
+    }
+  ]
+}

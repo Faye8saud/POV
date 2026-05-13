@@ -29,9 +29,29 @@
 		89D3D8EC2FB08069004EC09F /* POVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = POVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		65CD778F2FB25755001199B6 /* Exceptions for "POV" folder in "POV" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 65CD77272FA9DC61001199B6 /* POV */;
+		};
+		65CD77962FB3240A001199B6 /* Exceptions for "Resources" folder in "POV" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				pov_data.json,
+			);
+			target = 65CD77272FA9DC61001199B6 /* POV */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		65CD772A2FA9DC61001199B6 /* POV */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				65CD778F2FB25755001199B6 /* Exceptions for "POV" folder in "POV" target */,
+			);
 			path = POV;
 			sourceTree = "<group>";
 		};
@@ -52,6 +72,9 @@
 		};
 		65CD77542FB07EDD001199B6 /* Resources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				65CD77962FB3240A001199B6 /* Exceptions for "Resources" folder in "POV" target */,
+			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
@@ -427,6 +450,12 @@
 				DEVELOPMENT_TEAM = JWTK4J2NK6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = POV/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "we need access to your camera";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "we need to access your microphone";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "we need to add to your library";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "we need to access your library";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -459,6 +488,12 @@
 				DEVELOPMENT_TEAM = JWTK4J2NK6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = POV/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "we need access to your camera";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "we need to access your microphone";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "we need to add to your library";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "we need to access your library";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
