@@ -3,7 +3,7 @@
     {
       "name": "Tender",
       "description": "soft edges, warm light, quiet attention",
-      "color": "#C4798A",
+      "color": "#A76D78",
       "accentColor": "#F2B5C0",
       "directors": [
         {
@@ -95,7 +95,7 @@
     {
       "name": "Restless",
       "description": "close, unsettled, vivid, searching",
-      "color": "#5C6BC0",
+      "color": "#5F5390",
       "accentColor": "#9FA8DA",
       "directors": [
         {
@@ -187,7 +187,7 @@
     {
       "name": "Wandering",
       "description": "curious, open, unhurried, drifting",
-      "color": "#66897A",
+      "color": "#688181",
       "accentColor": "#A8C5B5",
       "directors": [
         {
@@ -279,8 +279,8 @@
     {
       "name": "Charged",
       "description": "urgent, intentional, weighted, sharp",
-      "color": "#8B6914",
-      "accentColor": "#D4A843",
+      "color": "#A62228",
+      "accentColor": "#C23441",
       "directors": [
         {
           "name": "Christopher Nolan",
@@ -371,8 +371,8 @@
     {
       "name": "Playful",
       "description": "curious, bright, surprising, alive",
-      "color": "#6A5ACD",
-      "accentColor": "#B8A9E8",
+      "color": "#CA792B",
+      "accentColor": "#C89452",
       "directors": [
         {
           "name": "Wes Anderson",

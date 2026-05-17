@@ -5,13 +5,13 @@
 //  Created by Fay  on 11/05/2026.
 //
 import SwiftUI
- 
+
 // MARK: - Mood Selector Strip
 struct MoodSelectorView: View {
- 
+
     let moods: [Mood]
     @Binding var selectedMood: Mood
- 
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
@@ -29,13 +29,13 @@ struct MoodSelectorView: View {
         }
     }
 }
- 
+
 // MARK: - Single Mood Pill
 private struct MoodPill: View {
- 
+
     let mood: Mood
     let isSelected: Bool
- 
+
     var body: some View {
         Text(mood.name)
             .font(.custom("Georgia-Italic", size: 14))
@@ -44,9 +44,7 @@ private struct MoodPill: View {
             .padding(.vertical, 9)
             .background(
                 Capsule()
-                    .fill(isSelected
-                          ? mood.color
-                          : mood.color.opacity(0.18))
+                    .fill(isSelected ? mood.color : mood.color.opacity(0.18))
                     .overlay(
                         Capsule()
                             .strokeBorder(
@@ -59,7 +57,7 @@ private struct MoodPill: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.65), value: isSelected)
     }
 }
- 
+
 #Preview {
     ZStack {
         Color.black.ignoresSafeArea()
