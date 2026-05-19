@@ -9,7 +9,10 @@ import SwiftUI
 
 struct HomeView: View {
 
+    @Environment(\.selectedPOVTab) private var selectedPOVTab
+
     @State private var selectedMood: Mood = POVData.moods[0]
+    @State private var selectedDirector: DirectorLens?
 
     var body: some View {
         ZStack {
@@ -53,7 +56,12 @@ struct HomeView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 18) {
                             ForEach(POVData.lenses(for: selectedMood)) { director in
-                                DirectorCard(director: director)
+                                Button {
+                                    selectedDirector = director
+                                } label: {
+                                    DirectorCard(director: director)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.horizontal, 24)
@@ -135,6 +143,11 @@ struct HomeView: View {
             }
         }
         .ignoresSafeArea()
+        .fullScreenCover(item: $selectedDirector) { director in
+            DirectorBriefView(mood: selectedMood, director: director) {
+                selectedPOVTab.wrappedValue = .record
+            }
+        }
     }
 }
 

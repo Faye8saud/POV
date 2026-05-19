@@ -27,8 +27,7 @@ struct ContentView: View {
                     .transition(.opacity)
  
             case .archive:
-                // TODO: Replace with real ArchiveView()
-                placeholderScreen(title: "Archive", icon: "calendar")
+                CalendarView()
                     .transition(.opacity)
             }
         }
