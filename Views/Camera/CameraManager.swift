@@ -21,6 +21,8 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var cameraPosition: AVCaptureDevice.Position = .back
     @Published var recordingDuration: TimeInterval = 0
     @Published var permissionGranted = false
+
+    var onRecordingFinished: ((URL, TimeInterval) -> Void)?
  
     // MARK: AVFoundation
     let session = AVCaptureSession()
@@ -199,7 +201,14 @@ extension CameraManager: AVCaptureFileOutputRecordingDelegate {
                     didFinishRecordingTo outputFileURL: URL,
                     from connections: [AVCaptureConnection],
                     error: Error?) {
-        // TODO: handle saved video (save to Photos, upload, etc.)
-        print("Recording finished: \(outputFileURL)")
+        guard error == nil else {
+            print("Recording failed: \(error?.localizedDescription ?? "Unknown error")")
+            return
+        }
+
+        let duration = recordingDuration
+        DispatchQueue.main.async { [weak self] in
+            self?.onRecordingFinished?(outputFileURL, duration)
+        }
     }
 }

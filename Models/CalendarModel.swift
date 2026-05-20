@@ -9,17 +9,19 @@ import SwiftUI
 
 struct CalendarModel {
     private(set) var orderedMonths: [MemoryMonth]
+    private(set) var recentEntries: [MemoryEntry]
     private(set) var selectedCapsuleId: UUID?
     private(set) var selectedMonthId: UUID?
 
-    init(months: [MemoryMonth] = MemoryMonth.sampleMonths) {
-        self.orderedMonths = months
-        self.selectedMonthId = months.first?.id
-        self.selectedCapsuleId = months.flatMap(\.entries).first?.id
-    }
+    init(entries: [EntryModel] = []) {
+        let videoEntries = entries
+            .filter { $0.videoURL != nil }
+            .sorted { $0.createdAt > $1.createdAt }
 
-    var recentEntries: [MemoryEntry] {
-        orderedMonths.flatMap(\.entries)
+        self.recentEntries = Self.makeRecentEntries(from: Array(videoEntries.prefix(7)))
+        self.orderedMonths = Self.makeMonths(from: videoEntries)
+        self.selectedMonthId = orderedMonths.first?.id
+        self.selectedCapsuleId = recentEntries.first?.id
     }
 
     var activeEntry: MemoryEntry? {
@@ -34,6 +36,21 @@ struct CalendarModel {
         }
 
         return [selectedMonth] + orderedMonths.filter { $0.id != selectedMonthId }
+    }
+
+    mutating func update(entries: [EntryModel]) {
+        let previousCapsuleId = selectedCapsuleId
+        let previousMonthId = selectedMonthId
+        let updated = CalendarModel(entries: entries)
+
+        orderedMonths = updated.orderedMonths
+        recentEntries = updated.recentEntries
+        selectedCapsuleId = recentEntries.contains { $0.id == previousCapsuleId }
+            ? previousCapsuleId
+            : recentEntries.first?.id
+        selectedMonthId = orderedMonths.contains { $0.id == previousMonthId }
+            ? previousMonthId
+            : orderedMonths.first?.id
     }
 
     mutating func selectCapsule(_ entry: MemoryEntry) {
@@ -51,6 +68,77 @@ struct CalendarModel {
     func isSelectedMonth(_ month: MemoryMonth) -> Bool {
         selectedMonthId == month.id
     }
+
+    private static func makeRecentEntries(from entries: [EntryModel]) -> [MemoryEntry] {
+        entries.map { entry in
+            MemoryEntry(
+                id: entry.id,
+                shortDate: Self.shortDateFormatter.string(from: entry.date).uppercased(),
+                mood: MemoryMood(mood: entry.mood),
+                clipCount: max(entry.clips.count, 1)
+            )
+        }
+    }
+
+    private static func makeMonths(from entries: [EntryModel]) -> [MemoryMonth] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: entries) { entry in
+            calendar.dateComponents([.year, .month], from: entry.date)
+        }
+
+        return grouped.compactMap { components, entries in
+            guard let monthStart = calendar.date(from: components) else { return nil }
+            let sortedEntries = entries.sorted { $0.createdAt > $1.createdAt }
+            let monthMood = dominantMoodName(in: sortedEntries)
+            let mood = MemoryMood(moodName: monthMood)
+
+            return MemoryMonth(
+                id: Self.monthId(for: components),
+                month: Self.monthFormatter.string(from: monthStart),
+                year: components.year ?? calendar.component(.year, from: monthStart),
+                coverImage: "",
+                dominantMood: mood,
+                entries: makeRecentEntries(from: sortedEntries)
+            )
+        }
+        .sorted { lhs, rhs in
+            guard let lhsDate = monthDate(month: lhs), let rhsDate = monthDate(month: rhs) else {
+                return lhs.year > rhs.year
+            }
+            return lhsDate > rhsDate
+        }
+    }
+
+    private static func dominantMoodName(in entries: [EntryModel]) -> String {
+        Dictionary(grouping: entries) { $0.moodName }
+            .max { lhs, rhs in lhs.value.count < rhs.value.count }?
+            .key ?? entries.first?.moodName ?? POVData.moods.first?.name ?? "Tender"
+    }
+
+    private static func monthId(for components: DateComponents) -> UUID {
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        return UUID(uuidString: String(format: "00000000-0000-0000-0000-%04d%08d", year, month)) ?? UUID()
+    }
+
+    private static func monthDate(month: MemoryMonth) -> Date? {
+        var components = DateComponents()
+        components.year = month.year
+        components.month = monthFormatter.shortMonthSymbols.firstIndex(of: month.month).map { $0 + 1 }
+        return Calendar.current.date(from: components)
+    }
+
+    private static let shortDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter
+    }()
+
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM"
+        return formatter
+    }()
 }
 
 struct MemoryMood: Identifiable, Hashable {
@@ -64,49 +152,32 @@ struct MemoryMood: Identifiable, Hashable {
         self.color = color
         self.accentColor = accentColor
     }
+
+    init(mood: Mood?) {
+        self.init(
+            name: mood?.name ?? "Tender",
+            color: mood?.color ?? Color(hex: "A76D78"),
+            accentColor: mood?.accentColor ?? Color(hex: "F2B5C0")
+        )
+    }
+
+    init(moodName: String) {
+        self.init(mood: POVData.moods.first { $0.name == moodName })
+    }
 }
 
 struct MemoryEntry: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     let shortDate: String
     let mood: MemoryMood
     let clipCount: Int
 }
 
 struct MemoryMonth: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     let month: String
     let year: Int
     let coverImage: String
     let dominantMood: MemoryMood
     let entries: [MemoryEntry]
-}
-
-private extension MemoryMood {
-    static let tender = MemoryMood(name: "Tender", color: Color(hex: "A76D78"), accentColor: Color(hex: "F2B5C0"))
-    static let restless = MemoryMood(name: "Restless", color: Color(hex: "5F5390"), accentColor: Color(hex: "9FA8DA"))
-    static let wandering = MemoryMood(name: "Wandering", color: Color(hex: "688181"), accentColor: Color(hex: "A8C5B5"))
-    static let charged = MemoryMood(name: "Charged", color: Color(hex: "A62228"), accentColor: Color(hex: "C23441"))
-    static let playful = MemoryMood(name: "Playful", color: Color(hex: "CA792B"), accentColor: Color(hex: "C89452"))
-}
-
-extension MemoryMonth {
-    static let sampleMonths: [MemoryMonth] = [
-        MemoryMonth(month: "Aug", year: 2026, coverImage: "calendar-august", dominantMood: .tender, entries: [
-            MemoryEntry(shortDate: "AUG 5", mood: .tender, clipCount: 8),
-            MemoryEntry(shortDate: "AUG 20", mood: .playful, clipCount: 4)
-        ]),
-        MemoryMonth(month: "Apr", year: 2026, coverImage: "calendar-april", dominantMood: .restless, entries: [
-            MemoryEntry(shortDate: "APR 30", mood: .restless, clipCount: 5),
-            MemoryEntry(shortDate: "APR 5", mood: .wandering, clipCount: 3)
-        ]),
-        MemoryMonth(month: "May", year: 2026, coverImage: "calendar-may", dominantMood: .charged, entries: [
-            MemoryEntry(shortDate: "MAY 1", mood: .charged, clipCount: 12),
-            MemoryEntry(shortDate: "MAY 18", mood: .tender, clipCount: 6)
-        ]),
-        MemoryMonth(month: "Jun", year: 2026, coverImage: "calendar-june", dominantMood: .wandering, entries: [
-            MemoryEntry(shortDate: "JUN 8", mood: .wandering, clipCount: 7),
-            MemoryEntry(shortDate: "JUN 21", mood: .playful, clipCount: 9)
-        ])
-    ]
 }

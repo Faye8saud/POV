@@ -5,10 +5,13 @@
 //  Created by Fay  on 10/05/2026.
 //
 import SwiftUI
+import SwiftData
 import AVFoundation
 
 // MARK: - Recording View
 struct RecordingView: View {
+
+    @Environment(\.modelContext) private var modelContext
 
     @StateObject private var camera = CameraManager()
 
@@ -50,11 +53,12 @@ struct RecordingView: View {
             .padding(.bottom, 200)
         }
         .ignoresSafeArea()
-        .onChange(of: selectedMood) { _ in
+        .onChange(of: selectedMood) { _, _ in
             selectedLens = POVData.lenses(for: selectedMood).first
         }
         .onAppear {
             selectedLens = POVData.lenses(for: selectedMood).first
+            camera.onRecordingFinished = saveFinishedRecording
         }
     }
 
@@ -189,6 +193,60 @@ struct RecordingView: View {
             .compactMap { $0 as? UIWindowScene }
             .first?.windows.first?.safeAreaInsets.bottom ?? 34
     }
+
+    private func saveFinishedRecording(from temporaryURL: URL, duration: TimeInterval) {
+        guard let selectedLens else { return }
+
+        do {
+            let savedURL = try persistRecording(from: temporaryURL)
+            let entryID = UUID()
+            let clip = RecordedClipModel(
+                url: savedURL,
+                promptIndex: 0,
+                promptText: selectedLens.shootingPrompts.first ?? "",
+                duration: duration,
+                entryID: entryID
+            )
+            let entry = EntryModel(
+                id: entryID,
+                date: .now,
+                moodName: selectedMood.name,
+                lensName: selectedLens.name,
+                clips: [clip],
+                videoURL: savedURL,
+                createdAt: .now
+            )
+            modelContext.insert(entry)
+            try modelContext.save()
+        } catch {
+            print("Failed to save recording: \(error.localizedDescription)")
+        }
+    }
+
+    private func persistRecording(from temporaryURL: URL) throws -> URL {
+        let recordingsDirectory = try FileManager.default.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        ).appendingPathComponent("Recordings", isDirectory: true)
+
+        try FileManager.default.createDirectory(
+            at: recordingsDirectory,
+            withIntermediateDirectories: true
+        )
+
+        let destinationURL = recordingsDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("mov")
+
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            try FileManager.default.removeItem(at: destinationURL)
+        }
+
+        try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+        return destinationURL
+    }
 }
 
 // MARK: - Active Lens Shutter
@@ -252,7 +310,7 @@ struct ActiveLensShutter: View {
         .buttonStyle(.plain)
         .shadow(color: (isRecording ? Color.red : .white).opacity(0.4), radius: 14)
         .animation(.spring(response: 0.4, dampingFraction: 0.65), value: isRecording)
-        .onChange(of: isRecording) { recording in
+        .onChange(of: isRecording) { _, recording in
             pulsing = recording
         }
     }

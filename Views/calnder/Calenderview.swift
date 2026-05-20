@@ -6,17 +6,15 @@
 //
 
 import SwiftUI
+import SwiftData
 import UIKit
 
 struct CalendarView: View {
 
     @Environment(\.selectedPOVTab) private var selectedPOVTab
+    @Query(sort: \EntryModel.createdAt, order: .reverse) private var savedEntries: [EntryModel]
 
-    @State private var calendarModel: CalendarModel
-
-    init(months: [MemoryMonth] = MemoryMonth.sampleMonths) {
-        _calendarModel = State(initialValue: CalendarModel(months: months))
-    }
+    @State private var calendarModel = CalendarModel()
 
     var body: some View {
         ZStack {
@@ -41,16 +39,28 @@ struct CalendarView: View {
                         .padding(.top, 82)
                         .padding(.bottom, 22)
 
-                    capsuleStrip
-                        .padding(.bottom, 36)
+                    if !calendarModel.recentEntries.isEmpty {
+                        capsuleStrip
+                            .padding(.bottom, 36)
+                    }
 
-                    cardStack
+                    if calendarModel.visibleMonths.isEmpty {
+                        emptyState
+                    } else {
+                        cardStack
+                    }
                 }
                 .padding(.bottom, 96)
             }
             .ignoresSafeArea(edges: .top)
         }
         .environment(\.layoutDirection, .leftToRight)
+        .onAppear {
+            calendarModel.update(entries: savedEntries)
+        }
+        .onChange(of: savedEntries) { _, entries in
+            calendarModel.update(entries: entries)
+        }
     }
 
     private var header: some View {
@@ -70,6 +80,19 @@ struct CalendarView: View {
             }
             .padding(.horizontal, 24)
         }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "film")
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(Color("text 2").opacity(0.35))
+            Text("No videos yet")
+                .font(.custom("Georgia-Italic", size: 18))
+                .foregroundStyle(Color("text 2").opacity(0.65))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
     }
 
     private var cardStack: some View {
@@ -151,7 +174,7 @@ struct CalendarView: View {
             VStack {
                 HStack(alignment: .top) {
                     Text(month.month.uppercased())
-                        .font(.custom("Georgia-Regular", size: 14))
+                        .font(.custom("Georgia-italic", size: 14))
                         .foregroundColor(.white)
                         .tracking(2)
                     Spacer()
@@ -250,4 +273,8 @@ struct CalendarView: View {
 
 #Preview {
     CalendarView()
+        .modelContainer(
+            for: [EntryModel.self, RecordedClipModel.self, ReflectionAnswer.self],
+            inMemory: true
+        )
 }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
  
 @main
 struct POVApp: App {
@@ -13,6 +14,7 @@ struct POVApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(.dark)
+                .modelContainer(for: [EntryModel.self, RecordedClipModel.self, ReflectionAnswer.self])
         }
     }
 }

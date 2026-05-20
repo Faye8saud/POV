@@ -11,8 +11,7 @@ struct HomeView: View {
 
     @Environment(\.selectedPOVTab) private var selectedPOVTab
 
-    @State private var selectedMood: Mood = POVData.moods[0]
-    @State private var selectedDirector: DirectorLens?
+    @State private var homeModel = HomeModel()
 
     var body: some View {
         ZStack {
@@ -20,7 +19,7 @@ struct HomeView: View {
 
             VStack {
                 Ellipse()
-                    .fill(selectedMood.color.opacity(0.35))
+                    .fill(homeModel.moodGlowColor)
                     .blur(radius: 80)
                     .frame(width: 350, height: 250)
                     .padding(.top, 400)
@@ -31,9 +30,10 @@ struct HomeView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 4) {
 
-                    Text("MONDAY · MAY 12")
-                        .font(.custom("Georgia-Italic", size: 16))
+                    Text(homeModel.dateTitle)
+                        .font(.system(size: 14, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color("text 2"))
+                        .tracking(1.5)
                         .padding(.horizontal, 24)
 
                     Text("How do you want to feel?")
@@ -41,7 +41,7 @@ struct HomeView: View {
                         .foregroundStyle(Color("text 1"))
                         .padding(.horizontal, 24)
 
-                    MoodSelectorView(moods: POVData.moods, selectedMood: $selectedMood)
+                    MoodSelectorView(moods: POVData.moods, selectedMood: $homeModel.selectedMood)
                         .padding(.top, 24)
 
                     Spacer().frame(height: 16)
@@ -55,9 +55,9 @@ struct HomeView: View {
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 18) {
-                            ForEach(POVData.lenses(for: selectedMood)) { director in
+                            ForEach(homeModel.directorsForSelectedMood) { director in
                                 Button {
-                                    selectedDirector = director
+                                    homeModel.selectDirector(director)
                                 } label: {
                                     DirectorCard(director: director)
                                 }
@@ -143,9 +143,17 @@ struct HomeView: View {
             }
         }
         .ignoresSafeArea()
-        .fullScreenCover(item: $selectedDirector) { director in
-            DirectorBriefView(mood: selectedMood, director: director) {
+        .fullScreenCover(item: $homeModel.selectedDirector) { director in
+            DirectorBriefView(mood: homeModel.selectedMood, director: director) {
+                homeModel.startDay()
                 selectedPOVTab.wrappedValue = .record
+            }
+        }
+        .task {
+            homeModel.refreshDate()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                homeModel.refreshDate()
             }
         }
     }
