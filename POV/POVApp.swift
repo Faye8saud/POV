@@ -59,9 +59,14 @@ struct POVApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+
                 .modelContainer(localContainer)
                 .environment(\.cloudModelContext, cloudContainer.mainContext)
                 .environment(\.cloudContainer, cloudContainer)
+
+                .preferredColorScheme(.dark)
+                .modelContainer(for: [EntryModel.self, RecordedClipModel.self, ReflectionAnswer.self])
+
         }
     }
 }

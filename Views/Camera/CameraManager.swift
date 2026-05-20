@@ -20,6 +20,7 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var aspectRatio: AspectRatio = .ratio5_3
     @Published var cameraPosition: AVCaptureDevice.Position = .back
     @Published var recordingDuration: TimeInterval = 0
+<<<<<<< HEAD
     @Published var permissionGranted  = false
 
     // MARK: Slow Motion
@@ -44,6 +45,12 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var countdownRemaining: Int = 0
     var isCountingDown: Bool { countdownRemaining > 0 }
 
+=======
+    @Published var permissionGranted = false
+
+    var onRecordingFinished: ((URL, TimeInterval) -> Void)?
+ 
+>>>>>>> main
     // MARK: AVFoundation
     let session = AVCaptureSession()
     private var videoDeviceInput: AVCaptureDeviceInput?
@@ -361,6 +368,7 @@ extension CameraManager: AVCaptureFileOutputRecordingDelegate {
                     didFinishRecordingTo outputFileURL: URL,
                     from connections: [AVCaptureConnection],
                     error: Error?) {
+<<<<<<< HEAD
         let url = error == nil ? outputFileURL : nil
         DispatchQueue.main.async { [weak self] in
             self?.recordingCompletion?(url)
@@ -779,10 +787,10 @@ extension CameraManager: AVCaptureFileOutputRecordingDelegate {
                 self?.restoreFrameRate(on: self?.videoDeviceInput?.device)
             }
         }
-
+        
         let completion = clipSaveCompletion
         clipSaveCompletion = nil
-
+        
         let url = error == nil ? outputFileURL : nil
         DispatchQueue.main.async {
             completion?(url)

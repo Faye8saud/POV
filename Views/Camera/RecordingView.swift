@@ -7,12 +7,14 @@
 import SwiftUI
 import AVFoundation
 
-// MARK: - Recording View (entry point — injects modelContext into inner view)
+// MARK: - Recording View (entry point — injects modelContext + hideTabBar binding)
 struct RecordingView: View {
     @Environment(\.modelContext) private var modelContext
+    @Binding var hideTabBar: Bool
 
     var body: some View {
-        RecordingViewInner(session: RecordingSession(modelContext: modelContext))
+        RecordingViewInner(session: RecordingSession(modelContext: modelContext),
+                           hideTabBar: $hideTabBar)
     }
 }
 
@@ -21,6 +23,7 @@ private struct RecordingViewInner: View {
 
     @StateObject var session: RecordingSession
     @StateObject private var camera = CameraManager()
+    @Binding var hideTabBar: Bool
 
     @State private var selectedMood: Mood          = POVData.moods[0]
     @State private var selectedLens: DirectorLens? = nil
@@ -30,7 +33,7 @@ private struct RecordingViewInner: View {
     @State private var showDiscardSheet     = false
     @State private var showWrapSheet        = false
     @State private var navigateToVideo      = false
-    @State private var showExpandedControls = false   // right-side collapsible menu
+    @State private var showExpandedControls = false
 
     // MARK: Body
     var body: some View {
@@ -98,6 +101,9 @@ private struct RecordingViewInner: View {
     }
 
     private func handleNavigationChange(_ isNavigating: Bool) {
+        // Hide or show the persistent tab bar when entering/leaving VideoView
+        withAnimation { hideTabBar = isNavigating }
+
         if !isNavigating && session.isWrapping {
             withAnimation { session.reset() }
             selectedLens = POVData.lenses(for: selectedMood).first
@@ -157,9 +163,10 @@ private struct RecordingViewInner: View {
     }
 
     // MARK: - Bottom Stack
+    // NOTE: No POVTabBar here — ContentView owns the persistent one
     @ViewBuilder
     private var bottomStack: some View {
-        if !session.clips.isEmpty && !camera.isRecording {
+        if !$session.clips.isEmpty && !camera.isRecording {
             ClipTray(clips: session.clips) { clip in
                 withAnimation { session.deleteClip(clip) }
             }
@@ -182,17 +189,14 @@ private struct RecordingViewInner: View {
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
         lensAndRecordRow
-            .padding(.bottom, 22)
-        POVTabBar(selectedTab: selectedTab, isRecording: camera.isRecording)
-            .padding(.bottom, bottomSafeAreaPad + 4)
+            // Extra pad so record row clears the persistent tab bar
+            .padding(.bottom, bottomSafeAreaPad + 80)
     }
 
     // MARK: - Countdown Overlay
     @ViewBuilder
     private var countdownOverlay: some View {
         if camera.isCountingDown {
-            let bottomPad: CGFloat = bottomSafeAreaPad + 118
-            // Centered on screen
             CountdownBubble(remaining: camera.countdownRemaining)
                 .transition(.scale(scale: 0.7).combined(with: .opacity))
                 .animation(.spring(response: 0.3, dampingFraction: 0.7),
@@ -211,7 +215,10 @@ private struct RecordingViewInner: View {
                     date: Date(),
                     aspectRatio: session.recordedAspectRatio,
                     onStartReflecting: { },
-                    onSaveComplete: { session.reset() }
+                    onSaveComplete: {
+                        withAnimation { hideTabBar = false }
+                        session.reset()
+                    }
                 ),
                 isActive: $navigateToVideo
             ) {
@@ -230,7 +237,6 @@ private struct RecordingViewInner: View {
         if camera.permissionGranted {
             GeometryReader { geo in
                 let previewFrame = frameForRatio(camera.aspectRatio, in: geo.size)
-
                 FilteredCameraPreview(
                     session: camera.session,
                     aspectRatio: camera.aspectRatio,
@@ -294,10 +300,7 @@ private struct RecordingViewInner: View {
                 Spacer()
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
-
         } else {
-            // Shooting mode top bar — X always visible, checkmark only when clips exist
-            // Hide everything during active recording to keep screen clean
             if !camera.isRecording {
                 HStack {
                     Button {
@@ -331,9 +334,9 @@ private struct RecordingViewInner: View {
                             .background(Circle().fill(.black.opacity(0.35)))
                     }
                     .buttonStyle(.plain)
-                    .opacity(session.clips.isEmpty ? 0 : 1)
-                    .disabled(session.clips.isEmpty)
-                    .animation(.easeInOut(duration: 0.25), value: session.clips.isEmpty)
+                    .opacity($session.clips.isEmpty ? 0 : 1)
+                    .disabled($session.clips.isEmpty)
+                    .animation(.easeInOut(duration: 0.25), value: $session.clips.isEmpty)
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -375,7 +378,6 @@ private struct RecordingViewInner: View {
             .transition(.opacity.combined(with: .move(edge: .top)))
 
         } else if session.isShooting, let prompt = session.currentPrompt {
-            // Prompt card — hidden during active recording (guarded at call site)
             VStack(spacing: 14) {
                 Text("\(session.currentPromptIndex + 1) of \(session.currentPrompts?.count ?? 4)")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -414,7 +416,7 @@ private struct RecordingViewInner: View {
                 Text("That's a wrap.")
                     .font(.custom("Georgia-Italic", size: 24))
                     .foregroundStyle(.white)
-                Text("You captured \(session.clips.count) shot\(session.clips.count == 1 ? "" : "s").")
+                Text("You captured \($session.clips.count) shot\(session.clips.count == 1 ? "" : "s").")
                     .font(.system(size: 13, weight: .light))
                     .foregroundStyle(.white.opacity(0.55))
             }
@@ -471,7 +473,7 @@ private struct RecordingViewInner: View {
         )
     }
 
-    // MARK: - Zoom Pill (above record row in shooting mode)
+    // MARK: - Zoom Pill
     private var zoomPill: some View {
         Button {
             let levels: [CGFloat] = [1.0, 2.0, 0.5]
@@ -522,7 +524,6 @@ private struct RecordingViewInner: View {
 
         ZStack(alignment: .leading) {
             if session.isIdle {
-                // Lens strip to the right of the shutter
                 InactiveLensStrip(
                     lenses: POVData.lenses(for: selectedMood),
                     selectedLens: $selectedLens,
@@ -531,24 +532,19 @@ private struct RecordingViewInner: View {
                 .frame(width: sideWidth + gap, height: shutterSize)
                 .position(x: rightStart + (sideWidth + gap) / 2, y: midY)
                 .transition(.opacity)
-
             } else {
-                // Left side: flash + flip (hidden during recording)
                 if !camera.isRecording {
                     leftControls
                         .frame(width: sideWidth, height: shutterSize)
                         .position(x: leftMid, y: midY)
                         .transition(.opacity.combined(with: .scale(scale: 0.85)))
                 }
-
-                // Right side: aspect ratio + menu
                 rightControls
                     .frame(width: sideWidth, height: shutterSize)
                     .position(x: rightMid, y: midY)
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             }
 
-            // Shutter — always centred
             recordButton
                 .frame(width: shutterSize, height: shutterSize)
                 .position(x: centerX, y: midY)
@@ -578,7 +574,7 @@ private struct RecordingViewInner: View {
     }
 
     private var aspectRatioButton: some View {
-        let ratioLocked = session.isShooting && !session.clips.isEmpty
+        let ratioLocked = session.isShooting && !$session.clips.isEmpty
         return ShootingControlButton(
             icon: "aspectratio",
             label: camera.aspectRatio.rawValue,
@@ -627,7 +623,6 @@ private struct RecordingViewInner: View {
         }
     }
 
-    // Expanded pill rendered as an overlay so it floats above the row without clipping
     private var expandedControlsPill: some View {
         VStack(spacing: 0) {
             Button {
@@ -760,7 +755,7 @@ private struct RecordingViewInner: View {
     }
 }
 
-// MARK: - Shooting Control Button (flat icon, left side)
+// MARK: - Shooting Control Button
 private struct ShootingControlButton: View {
     let icon: String
     var label: String = ""
@@ -790,137 +785,7 @@ private struct ShootingControlButton: View {
     }
 }
 
-// MARK: - Expandable Controls Menu (right side, shooting mode)
-// Shows an aspect-ratio icon that expands into a small pill containing
-// aspect ratio, slow-motion, and timer toggles.
-private struct ExpandableControlsMenu: View {
-
-    @ObservedObject var camera: CameraManager
-    @Binding var isExpanded: Bool
-
-    var body: some View {
-        HStack(alignment: .center) {
-            Spacer()
-            if isExpanded {
-                expandedPill
-                    .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .trailing)))
-            } else {
-                collapsedButton
-                    .transition(.opacity.combined(with: .scale(scale: 0.85, anchor: .trailing)))
-            }
-        }
-    }
-
-    // Single icon shown when collapsed
-    private var collapsedButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
-                isExpanded = true
-            }
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(.black.opacity(0.40))
-                    .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-                    .frame(width: 46, height: 46)
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 17, weight: .regular))
-                    .foregroundStyle(.white)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    // Expanded vertical pill with slo-mo + timer only
-    private var expandedPill: some View {
-        VStack(spacing: 0) {
-
-            // Close button
-            Button {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
-                    isExpanded = false
-                }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .frame(width: 46, height: 26)
-            }
-            .buttonStyle(.plain)
-
-            pillDivider
-
-            // Slow motion
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    camera.toggleSlowMotion()
-                }
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: camera.isSlowMotionEnabled
-                          ? "gauge.with.dots.needle.67percent"
-                          : "gauge.with.dots.needle.33percent")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundStyle(camera.isSlowMotionEnabled ? Color.yellow : .white)
-                    Text("Slo-Mo")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-                .frame(width: 46, height: 44)
-            }
-            .buttonStyle(.plain)
-
-            pillDivider
-
-            // Countdown timer
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    camera.cycleCountdownMode()
-                }
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: "timer")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundStyle(camera.countdownMode == .off ? .white : Color.yellow)
-                    Text(camera.countdownMode.label)
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-                .frame(width: 46, height: 44)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 6)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.white.opacity(0.10), .clear],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                    )
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .strokeBorder(.white.opacity(0.14), lineWidth: 1)
-            }
-        )
-        .shadow(color: .black.opacity(0.4), radius: 12, y: 4)
-        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-    }
-
-    private var pillDivider: some View {
-        Rectangle()
-            .fill(.white.opacity(0.1))
-            .frame(height: 1)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 3)
-    }
-}
-
-// MARK: - Countdown Bubble (replaces the old overlay that lived in CameraControlsBar)
+// MARK: - Countdown Bubble
 private struct CountdownBubble: View {
     let remaining: Int
     var body: some View {
@@ -936,71 +801,6 @@ private struct CountdownBubble: View {
                 .animation(.spring(response: 0.3), value: remaining)
         }
         .shadow(color: .black.opacity(0.5), radius: 8)
-    }
-}
-
-// MARK: - Film Viewfinder Overlay
-struct FilmViewfinderOverlay: View {
-
-    private let cornerLength: CGFloat = 28
-    private let lineWidth:    CGFloat = 2.2
-    private let inset:        CGFloat = 24
-
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-
-            ZStack {
-                CornerBracket(corner: .topLeft)
-                    .position(x: inset + cornerLength / 2, y: inset + cornerLength / 2)
-                CornerBracket(corner: .topRight)
-                    .position(x: w - inset - cornerLength / 2, y: inset + cornerLength / 2)
-                CornerBracket(corner: .bottomLeft)
-                    .position(x: inset + cornerLength / 2, y: h - inset - cornerLength / 2)
-                CornerBracket(corner: .bottomRight)
-                    .position(x: w - inset - cornerLength / 2, y: h - inset - cornerLength / 2)
-            }
-        }
-    }
-}
-
-private enum BracketCorner { case topLeft, topRight, bottomLeft, bottomRight }
-
-private struct CornerBracket: View {
-    let corner: BracketCorner
-    private let length: CGFloat = 28
-    private let lineWidth: CGFloat = 2.2
-
-    var body: some View {
-        Canvas { ctx, size in
-            let l  = length
-            let lw = lineWidth
-            var path = Path()
-
-            switch corner {
-            case .topLeft:
-                path.move(to:    CGPoint(x: lw/2, y: l))
-                path.addLine(to: CGPoint(x: lw/2, y: lw/2))
-                path.addLine(to: CGPoint(x: l,    y: lw/2))
-            case .topRight:
-                path.move(to:    CGPoint(x: l - lw/2, y: l))
-                path.addLine(to: CGPoint(x: l - lw/2, y: lw/2))
-                path.addLine(to: CGPoint(x: 0,         y: lw/2))
-            case .bottomLeft:
-                path.move(to:    CGPoint(x: lw/2, y: 0))
-                path.addLine(to: CGPoint(x: lw/2, y: l - lw/2))
-                path.addLine(to: CGPoint(x: l,    y: l - lw/2))
-            case .bottomRight:
-                path.move(to:    CGPoint(x: l - lw/2, y: 0))
-                path.addLine(to: CGPoint(x: l - lw/2, y: l - lw/2))
-                path.addLine(to: CGPoint(x: 0,         y: l - lw/2))
-            }
-
-            ctx.stroke(path, with: .color(.white.opacity(0.85)),
-                       style: StrokeStyle(lineWidth: lw, lineCap: .square))
-        }
-        .frame(width: length, height: length)
     }
 }
 
@@ -1174,6 +974,66 @@ private struct ClipThumb: View {
                 thumbnail = img.map { UIImage(cgImage: $0) }
             }
         }
+    }
+}
+
+// MARK: - Film Viewfinder Overlay
+struct FilmViewfinderOverlay: View {
+    private let cornerLength: CGFloat = 28
+    private let lineWidth:    CGFloat = 2.2
+    private let inset:        CGFloat = 24
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            ZStack {
+                CornerBracket(corner: .topLeft)
+                    .position(x: inset + cornerLength / 2, y: inset + cornerLength / 2)
+                CornerBracket(corner: .topRight)
+                    .position(x: w - inset - cornerLength / 2, y: inset + cornerLength / 2)
+                CornerBracket(corner: .bottomLeft)
+                    .position(x: inset + cornerLength / 2, y: h - inset - cornerLength / 2)
+                CornerBracket(corner: .bottomRight)
+                    .position(x: w - inset - cornerLength / 2, y: h - inset - cornerLength / 2)
+            }
+        }
+    }
+}
+
+private enum BracketCorner { case topLeft, topRight, bottomLeft, bottomRight }
+
+private struct CornerBracket: View {
+    let corner: BracketCorner
+    private let length: CGFloat = 28
+    private let lineWidth: CGFloat = 2.2
+
+    var body: some View {
+        Canvas { ctx, size in
+            let l = length; let lw = lineWidth
+            var path = Path()
+            switch corner {
+            case .topLeft:
+                path.move(to: CGPoint(x: lw/2, y: l))
+                path.addLine(to: CGPoint(x: lw/2, y: lw/2))
+                path.addLine(to: CGPoint(x: l, y: lw/2))
+            case .topRight:
+                path.move(to: CGPoint(x: l - lw/2, y: l))
+                path.addLine(to: CGPoint(x: l - lw/2, y: lw/2))
+                path.addLine(to: CGPoint(x: 0, y: lw/2))
+            case .bottomLeft:
+                path.move(to: CGPoint(x: lw/2, y: 0))
+                path.addLine(to: CGPoint(x: lw/2, y: l - lw/2))
+                path.addLine(to: CGPoint(x: l, y: l - lw/2))
+            case .bottomRight:
+                path.move(to: CGPoint(x: l - lw/2, y: 0))
+                path.addLine(to: CGPoint(x: l - lw/2, y: l - lw/2))
+                path.addLine(to: CGPoint(x: 0, y: l - lw/2))
+            }
+            ctx.stroke(path, with: .color(.white.opacity(0.85)),
+                       style: StrokeStyle(lineWidth: lw, lineCap: .square))
+        }
+        .frame(width: length, height: length)
     }
 }
 

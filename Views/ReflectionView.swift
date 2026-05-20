@@ -6,37 +6,36 @@
 //
 import SwiftUI
 import SwiftData
- 
+
 // MARK: - Reflection View
-// Step 1: Yes/No button selection for question 1
-// Step 2: Free-text answer for question 2
-// Entry is always saved on finish.
 struct ReflectionView: View {
- 
+
     let lens: DirectorLens
     let date: Date
-    let mergedVideoURL: URL?    // nil if merge is still in progress (edge case)
+    let mergedVideoURL: URL?
     let moodName: String
- 
+
+    // Use both — cloudContext for CloudKit, modelContext as guaranteed fallback
     @Environment(\.cloudModelContext) private var cloudContext
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.selectedPOVTab) private var selectedTab
     @Environment(\.dismiss) private var dismiss
- 
-    @State private var step: Int = 1           // 1 or 2
-    @State private var answer1: String = ""    // "Yes" | "No" | "" (skipped)
-    @State private var answer2: String = ""    // free text
+
+    @State private var step: Int = 1
+    @State private var answer1: String = ""
+    @State private var answer2: String = ""
     @State private var isSaving = false
- 
+
     private var currentQuestion: String {
         step == 1 ? lens.question1 : lens.question2
     }
- 
+
     var body: some View {
         ZStack {
             Color(white: 0.06).ignoresSafeArea()
- 
+
             VStack(spacing: 0) {
- 
+
                 // MARK: Nav
                 HStack {
                     Button { dismiss() } label: {
@@ -47,21 +46,17 @@ struct ReflectionView: View {
                             .background(Circle().fill(.white.opacity(0.1)))
                     }
                     .buttonStyle(.plain)
- 
+
                     Spacer()
- 
-                    // Step indicator
+
                     Text("\(step) of 2")
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.35))
                         .tracking(1.5)
- 
+
                     Spacer()
- 
-                    // Skip this question
-                    Button {
-                        handleSkip()
-                    } label: {
+
+                    Button { handleSkip() } label: {
                         Text("Skip")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.white.opacity(0.45))
@@ -70,16 +65,14 @@ struct ReflectionView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
- 
+
                 Spacer()
- 
-                // MARK: Director context
+
                 Text("In the lens of \(lens.name)")
                     .font(.custom("Georgia-Italic", size: 14))
                     .foregroundStyle(.white.opacity(0.4))
                     .padding(.bottom, 28)
- 
-                // MARK: Question
+
                 Text(currentQuestion)
                     .font(.custom("Georgia-Italic", size: 22))
                     .foregroundStyle(.white)
@@ -92,10 +85,8 @@ struct ReflectionView: View {
                         removal:   .opacity.combined(with: .move(edge: .leading))
                     ))
                     .animation(.spring(response: 0.4, dampingFraction: 0.82), value: step)
- 
-                // MARK: Answer Input — switches based on step
+
                 if step == 1 {
-                    // Yes / No button selection
                     YesNoSelector(selection: $answer1)
                         .padding(.horizontal, 24)
                         .padding(.top, 36)
@@ -104,7 +95,6 @@ struct ReflectionView: View {
                             removal:   .opacity.combined(with: .move(edge: .leading))
                         ))
                 } else {
-                    // Free-text editor
                     ZStack(alignment: .topLeading) {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(.white.opacity(0.06))
@@ -112,7 +102,7 @@ struct ReflectionView: View {
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                                     .strokeBorder(.white.opacity(0.1), lineWidth: 1)
                             )
- 
+
                         if answer2.isEmpty {
                             Text("Write your thoughts…")
                                 .font(.system(size: 15, weight: .light))
@@ -120,7 +110,7 @@ struct ReflectionView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 14)
                         }
- 
+
                         TextEditor(text: $answer2)
                             .font(.system(size: 15, weight: .light))
                             .foregroundStyle(.white)
@@ -137,13 +127,10 @@ struct ReflectionView: View {
                         removal:   .opacity.combined(with: .move(edge: .leading))
                     ))
                 }
- 
+
                 Spacer()
- 
-                // MARK: CTA
-                Button {
-                    handleContinue()
-                } label: {
+
+                Button { handleContinue() } label: {
                     Group {
                         if isSaving {
                             ProgressView().tint(Color(white: 0.06))
@@ -161,8 +148,6 @@ struct ReflectionView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 52)
                 .disabled(isSaving)
-                // Disable Next on step 1 only if nothing is selected
-                // (user can still skip via the Skip button)
                 .opacity(step == 1 && answer1.isEmpty ? 0.4 : 1)
                 .disabled(step == 1 && answer1.isEmpty)
             }
@@ -170,9 +155,9 @@ struct ReflectionView: View {
         .navigationBarHidden(true)
         .animation(.spring(response: 0.4, dampingFraction: 0.82), value: step)
     }
- 
+
     // MARK: - Actions
- 
+
     private func handleContinue() {
         if step == 1 {
             withAnimation { step = 2 }
@@ -180,7 +165,7 @@ struct ReflectionView: View {
             saveAndFinish()
         }
     }
- 
+
     private func handleSkip() {
         if step == 1 {
             answer1 = ""
@@ -190,11 +175,11 @@ struct ReflectionView: View {
             saveAndFinish()
         }
     }
- 
+
     private func saveAndFinish() {
         guard !isSaving else { return }
         isSaving = true
- 
+
         let entry = DayEntry(
             date: date,
             moodName: moodName,
@@ -204,26 +189,26 @@ struct ReflectionView: View {
             reflectionAnswer2: answer2,
             mergedVideoURL: mergedVideoURL?.absoluteString ?? ""
         )
- 
-        if let context = cloudContext {
-            context.insert(entry)
-            try? context.save()
-        }
- 
+
+        // Prefer cloudContext (CloudKit sync), fall back to local modelContext
+        let context = cloudContext ?? modelContext
+        context.insert(entry)
+        try? context.save()
+
         selectedTab.wrappedValue = .archive
     }
 }
- 
+
 // MARK: - Yes / No Selector
 private struct YesNoSelector: View {
- 
-    @Binding var selection: String  // "Yes" | "No" | ""
- 
+
+    @Binding var selection: String
+
     var body: some View {
         HStack(spacing: 16) {
             ForEach(["Yes", "No"], id: \.self) { option in
                 let isSelected = selection == option
- 
+
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                         selection = option

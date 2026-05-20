@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 // MARK: - Archive View
-struct ArchiveView: View {
+/*struct ArchiveView: View {
 
     @Environment(\.selectedPOVTab) private var selectedTab
     @Query(sort: \DayEntry.date, order: .reverse) private var entries: [DayEntry]
@@ -147,3 +147,4 @@ struct ArchiveEntryRow: View {
         return f.string(from: date)
     }
 }
+*/
