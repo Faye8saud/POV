@@ -22,8 +22,8 @@ struct POVTabBar: View {
 
             // ── Home ───────────────────────────────────────────────────
             TabBarItem(
-                icon: "house",
-                iconFilled: "house.fill",
+                icon: "sparkles",
+                iconFilled: "sparkles",
                 tab: .home,
                 selectedTab: $selectedTab
             )
@@ -37,8 +37,8 @@ struct POVTabBar: View {
 
             // ── Archive ────────────────────────────────────────────────
             TabBarItem(
-                icon: "calendar",
-                iconFilled: "calendar.badge.clock",
+                icon: "film.stack",
+                iconFilled: "film.stack",
                 tab: .archive,
                 selectedTab: $selectedTab
             )
@@ -128,8 +128,12 @@ private struct RecordCenterButton: View {
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(isRecording ? Color.red : .white.opacity(isSelected ? 1 : 0.7))
                     .scaleEffect(isRecording ? 1.08 : 1.0)
-                    .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true),
-                               value: isRecording)
+                    .animation(
+                        isRecording
+                            ? .easeInOut(duration: 0.6).repeatForever(autoreverses: true)
+                            : .default,
+                        value: isRecording
+                    )
             }
         }
         .buttonStyle(.plain)

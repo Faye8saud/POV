@@ -9,6 +9,7 @@ import SwiftUI
 struct HomeView: View {
 
     @State private var selectedMood: Mood = POVData.moods[0]
+    @Environment(\.selectedPOVTab) private var selectedTab  // ← add this
 
     var body: some View {
         ZStack {
@@ -44,9 +45,9 @@ struct HomeView: View {
                     .font(.custom("Georgia-Bold", size: 16))
                     .foregroundStyle(Color("text 1"))
                     .padding(.horizontal, 17)
-                
+
                 Spacer().frame(height: 10)
-                
+
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 18) {
                         ForEach(POVData.lenses(for: selectedMood)) { director in
@@ -57,6 +58,10 @@ struct HomeView: View {
                 }
 
                 Spacer()
+
+                // ← add tab bar at the bottom, wired to ContentView's selectedTab
+                POVTabBar(selectedTab: selectedTab, isRecording: false)
+                    .padding(.bottom, 34)
             }
             .padding(.top, 60)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -64,7 +69,6 @@ struct HomeView: View {
         .ignoresSafeArea()
     }
 }
-
 private struct DirectorCard: View {
     let director: DirectorLens
 

@@ -5,45 +5,59 @@
 //  Created by Fay  on 13/05/2026.
 //
 import Foundation
+import SwiftData
 import Combine
 
-// MARK: - Recorded Clip
-struct RecordedClip: Identifiable, Codable {
-    let id: UUID
-    let url: URL
-    let promptIndex: Int        // which prompt this clip was shot for
-    let directorName: String
-    let moodName: String
-    let date: Date
-
-    init(url: URL, promptIndex: Int, directorName: String, moodName: String) {
-        self.id = UUID()
-        self.url = url
-        self.promptIndex = promptIndex
-        self.directorName = directorName
-        self.moodName = moodName
-        self.date = Date()
-    }
-}
-
-// MARK: - Session State
+// MARK: - Session Phase
 enum SessionPhase: String, Codable {
-    case idle           // no recording started, mood picker visible
-    case shooting       // recording in progress, prompts showing
-    case wrapping       // all prompts done, wrap-up message
+    case idle
+    case shooting
+    case wrapping
 }
 
-// MARK: - Recording Session (persisted)
-final class RecordingSession: ObservableObject, Codable {
+// MARK: - Session Manager (ObservableObject wrapping SwiftData model)
+//
+// RecordingSessionModel is the persisted @Model.
+// This class is the ObservableObject your views already use — it stays as @StateObject.
+// It holds a reference to the single RecordingSessionModel row and proxies
+// all reads/writes through it, so RecordingView needs almost zero changes.
 
-    // MARK: Published
+@MainActor
+final class RecordingSession: ObservableObject {
+
+    // MARK: Published (mirrors the SwiftData model for view reactivity)
     @Published var phase: SessionPhase      = .idle
-    @Published var clips: [RecordedClip]    = []
+    @Published var clips: [RecordedClipModel] = []
     @Published var currentPromptIndex: Int  = 0
     @Published var activeMoodName: String   = ""
     @Published var activeLensName: String   = ""
 
-    // MARK: - Computed
+    var recordedAspectRatio: CameraManager.AspectRatio = .ratio5_3
+    
+    // MARK: SwiftData
+    private let modelContext: ModelContext
+    private var model: RecordingSessionModel
+
+    // MARK: - Init
+    init(modelContext: ModelContext) {
+        self.modelContext = modelContext
+
+        // Fetch existing session or create one
+        let descriptor = FetchDescriptor<RecordingSessionModel>()
+        if let existing = try? modelContext.fetch(descriptor).first {
+            self.model = existing
+        } else {
+            let fresh = RecordingSessionModel()
+            modelContext.insert(fresh)
+            try? modelContext.save()
+            self.model = fresh
+        }
+
+        // Sync published state from persisted model
+        self.syncFromModel()
+    }
+
+    // MARK: - Computed (unchanged from original)
     var isIdle: Bool       { phase == .idle }
     var isShooting: Bool   { phase == .shooting }
     var isWrapping: Bool   { phase == .wrapping }
@@ -66,103 +80,77 @@ final class RecordingSession: ObservableObject, Codable {
 
     // MARK: - Actions
 
-    /// Call when user taps a lens to begin a session
     func startSession(mood: Mood, lens: DirectorLens) {
-        // Switching director always clears clips
-        clips = []
-        currentPromptIndex = 0
-        activeMoodName = mood.name
-        activeLensName = lens.name
-        phase = .shooting
+        // Delete old clips from disk + model
+        model.clips.forEach { try? FileManager.default.removeItem(at: $0.url) }
+        model.clips.removeAll()
+
+        model.currentPromptIndex = 0
+        model.activeMoodName = mood.name
+        model.activeLensName = lens.name
+        model.phase = .shooting
         save()
+        syncFromModel()
     }
 
-    /// Call after a clip finishes recording
     func addClip(url: URL) {
-        let clip = RecordedClip(
+        let clip = RecordedClipModel(
             url: url,
             promptIndex: currentPromptIndex,
             directorName: activeLensName,
             moodName: activeMoodName
         )
-        clips.append(clip)
+        modelContext.insert(clip)
+        model.clips.append(clip)
 
-        // Advance to next prompt
         let total = currentPrompts?.count ?? 0
-        if currentPromptIndex + 1 >= total {
-            phase = .wrapping
+        if model.currentPromptIndex + 1 >= total {
+            model.phase = .wrapping
         } else {
-            currentPromptIndex += 1
+            model.currentPromptIndex += 1
         }
         save()
+        syncFromModel()
     }
 
-    /// Delete a clip; if all clips removed go back to idle
-    func deleteClip(_ clip: RecordedClip) {
-        // Remove file from disk
+    func deleteClip(_ clip: RecordedClipModel) {
         try? FileManager.default.removeItem(at: clip.url)
-        clips.removeAll { $0.id == clip.id }
+        model.clips.removeAll { $0.id == clip.id }
+        modelContext.delete(clip)
 
-        if clips.isEmpty {
-            phase = .idle
-            currentPromptIndex = 0
+        if model.clips.isEmpty {
+            model.phase = .idle
+            model.currentPromptIndex = 0
         }
         save()
+        syncFromModel()
     }
 
-    /// Reset everything back to idle
     func reset() {
-        clips.forEach { try? FileManager.default.removeItem(at: $0.url) }
-        clips = []
-        currentPromptIndex = 0
-        activeMoodName = ""
-        activeLensName = ""
-        phase = .idle
+        model.clips.forEach { try? FileManager.default.removeItem(at: $0.url) }
+        model.clips.removeAll()
+        model.currentPromptIndex = 0
+        model.activeMoodName = ""
+        model.activeLensName = ""
+        model.phase = .idle
         save()
+        syncFromModel()
     }
 
-    // MARK: - Persistence
+    // MARK: - Internals
 
-    private static let saveURL: URL = {
-        FileManager.default
-            .urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("pov_session.json")
-    }()
-
-    func save() {
-        try? JSONEncoder().encode(self).write(to: Self.saveURL)
+    private func syncFromModel() {
+        phase              = model.phase
+        clips              = model.clips.sorted { $0.date < $1.date }
+        currentPromptIndex = model.currentPromptIndex
+        activeMoodName     = model.activeMoodName
+        activeLensName     = model.activeLensName
     }
 
-    static func load() -> RecordingSession {
-        guard
-            let data = try? Data(contentsOf: saveURL),
-            let session = try? JSONDecoder().decode(RecordingSession.self, from: data)
-        else { return RecordingSession() }
-        return session
-    }
-
-    // MARK: - Codable
-    enum CodingKeys: String, CodingKey {
-        case phase, clips, currentPromptIndex, activeMoodName, activeLensName
-    }
-
-    init() {}
-
-    required init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        phase              = try c.decode(SessionPhase.self,   forKey: .phase)
-        clips              = try c.decode([RecordedClip].self, forKey: .clips)
-        currentPromptIndex = try c.decode(Int.self,            forKey: .currentPromptIndex)
-        activeMoodName     = try c.decode(String.self,         forKey: .activeMoodName)
-        activeLensName     = try c.decode(String.self,         forKey: .activeLensName)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(phase,              forKey: .phase)
-        try c.encode(clips,              forKey: .clips)
-        try c.encode(currentPromptIndex, forKey: .currentPromptIndex)
-        try c.encode(activeMoodName,     forKey: .activeMoodName)
-        try c.encode(activeLensName,     forKey: .activeLensName)
+    private func save() {
+        try? modelContext.save()
     }
 }
+
+
+

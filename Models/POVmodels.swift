@@ -5,6 +5,8 @@
 //  Created by Fay  on 11/05/2026.
 //
 import SwiftUI
+import Foundation
+import SwiftData
 
 // MARK: - Mood Model
 struct Mood: Identifiable, Hashable {
@@ -129,5 +131,99 @@ extension Color {
             blue:  Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+}
+
+//SwiftData models
+/// MARK: - RecordedClip (SwiftData Model — local only)
+@Model
+final class RecordedClipModel {
+    var id: UUID
+    var urlString: String
+    var promptIndex: Int
+    var directorName: String
+    var moodName: String
+    var date: Date
+ 
+    var session: RecordingSessionModel?
+ 
+    init(url: URL, promptIndex: Int, directorName: String, moodName: String) {
+        self.id = UUID()
+        self.urlString = url.absoluteString
+        self.promptIndex = promptIndex
+        self.directorName = directorName
+        self.moodName = moodName
+        self.date = Date()
+    }
+ 
+    var url: URL { URL(string: urlString) ?? FileManager.default.temporaryDirectory }
+}
+ 
+// MARK: - RecordingSession (SwiftData Model — local only)
+@Model
+final class RecordingSessionModel {
+    var phaseRaw: String
+    var currentPromptIndex: Int
+    var activeMoodName: String
+    var activeLensName: String
+ 
+    @Relationship(deleteRule: .cascade, inverse: \RecordedClipModel.session)
+    var clips: [RecordedClipModel] = []
+ 
+    var phase: SessionPhase {
+        get { SessionPhase(rawValue: phaseRaw) ?? .idle }
+        set { phaseRaw = newValue.rawValue }
+    }
+ 
+    init() {
+        self.phaseRaw = SessionPhase.idle.rawValue
+        self.currentPromptIndex = 0
+        self.activeMoodName = ""
+        self.activeLensName = ""
+        self.clips = []
+    }
+}
+ 
+// MARK: - DayEntry (SwiftData Model — synced to CloudKit)
+//
+// Represents one completed day vlog entry.
+// Only metadata is stored here; the actual video lives on-device at mergedVideoURL.
+// All properties are optional-compatible so CloudKit sync works without issues.
+@Model
+final class DayEntry {
+    var id: UUID = UUID()
+    var date: Date = Date()
+    var moodName: String = ""
+    var directorName: String = ""
+    var directorStyle: String = ""
+    var reflectionAnswer1: String = ""
+    var reflectionAnswer2: String = ""
+    var mergedVideoURL: String = ""
+
+    init(
+        date: Date,
+        moodName: String,
+        directorName: String,
+        directorStyle: String,
+        reflectionAnswer1: String = "",
+        reflectionAnswer2: String = "",
+        mergedVideoURL: String
+    ) {
+        self.id = UUID()
+        self.date = date
+        self.moodName = moodName
+        self.directorName = directorName
+        self.directorStyle = directorStyle
+        self.reflectionAnswer1 = reflectionAnswer1
+        self.reflectionAnswer2 = reflectionAnswer2
+        self.mergedVideoURL = mergedVideoURL
+    }
+
+    var videoURL: URL? {
+        URL(string: mergedVideoURL)
+    }
+
+    var hasReflection: Bool {
+        !reflectionAnswer1.isEmpty || !reflectionAnswer2.isEmpty
     }
 }
