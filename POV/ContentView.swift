@@ -14,46 +14,43 @@ struct ContentView: View {
     @State private var hideTabBar: Bool = false   // VideoView / ReflectionView raise this
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
 
-            // MARK: Main Content
-            Group {
-                switch selectedTab {
-                case .record:
-                    NavigationStack {
-                        RecordingView(hideTabBar: $hideTabBar)
-                    }
-                    .transition(.opacity)
-
-                case .home:
-                    HomeView()
+                // MARK: Main Content
+                Group {
+                    switch selectedTab {
+                    case .record:
+                        NavigationStack {
+                            RecordingView(hideTabBar: $hideTabBar)
+                        }
                         .transition(.opacity)
 
-                case .archive:
-                    NavigationStack {
-                        CalendarView()
+                    case .home:
+                        HomeView()
+                            .transition(.opacity)
+
+                    case .archive:
+                        NavigationStack {
+                            CalendarView()
+                        }
+                        .transition(.opacity)
                     }
-                    .transition(.opacity)
+                }
+                .animation(.easeInOut(duration: 0.25), value: selectedTab)
+
+                // MARK: Persistent Tab Bar — uses GeometryReader for reliable safe area
+                if !hideTabBar {
+                    POVTabBar(selectedTab: $selectedTab, isRecording: false)
+                        .padding(.bottom, geo.safeAreaInsets.bottom + 20)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut(duration: 0.22), value: hideTabBar)
                 }
             }
-            .animation(.easeInOut(duration: 0.25), value: selectedTab)
-
-            // MARK: Persistent Tab Bar — hidden during VideoView / ReflectionView
-            if !hideTabBar {
-                POVTabBar(selectedTab: $selectedTab, isRecording: false)
-                    .padding(.bottom, bottomSafeArea + 4)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.easeInOut(duration: 0.22), value: hideTabBar)
-            }
+            .ignoresSafeArea(edges: .bottom)
         }
         .ignoresSafeArea(edges: .bottom)
         .environment(\.selectedPOVTab, $selectedTab)
-    }
-
-    private var bottomSafeArea: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.windows.first?.safeAreaInsets.bottom ?? 34
     }
 }
 

@@ -7,21 +7,17 @@
 import SwiftUI
 import AVKit
 import SwiftData
+import Combine
 
 // MARK: - Archive Detail View
-// Shows the saved vlog film + reflection answers.
-// If both answers are empty (skipped), offers a "Start reflecting" CTA instead.
 struct ArchiveDetailView: View {
 
     let entry: DayEntry
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.cloudModelContext) private var cloudContext
-
-    @State private var player: AVPlayer? = nil
+    @StateObject private var playerHolder = ArchivePlayerHolder()
     @State private var navigateToReflection = false
 
-    // Derive the lens from stored data so ReflectionView gets the right questions
     private var lens: DirectorLens {
         POVData.moods
             .flatMap { POVData.lenses(for: $0) }
@@ -39,13 +35,13 @@ struct ArchiveDetailView: View {
             )
     }
 
-    private var hasReflection: Bool {
-        !entry.reflectionAnswer1.isEmpty || !entry.reflectionAnswer2.isEmpty
-    }
-
     private var videoURL: URL? {
         guard !entry.mergedVideoURL.isEmpty else { return nil }
-        return URL(string: entry.mergedVideoURL)
+        // Try as-is first (full URL string), then as a bare path
+        if let url = URL(string: entry.mergedVideoURL), url.scheme != nil {
+            return url
+        }
+        return URL(fileURLWithPath: entry.mergedVideoURL)
     }
 
     var body: some View {
@@ -74,8 +70,6 @@ struct ArchiveDetailView: View {
                             .kerning(1.5)
 
                         Spacer()
-
-                        // Spacer to balance chevron
                         Color.clear.frame(width: 36, height: 36)
                     }
                     .padding(.horizontal, 24)
@@ -88,10 +82,20 @@ struct ArchiveDetailView: View {
                             .fill(.black)
                             .frame(height: 420)
 
-                        if let player {
+                        if playerHolder.isReady, let player = playerHolder.player {
                             VideoPlayer(player: player)
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .frame(height: 420)
+                        } else if videoURL != nil {
+                            // Loading state
+                            VStack(spacing: 12) {
+                                ProgressView().tint(.white)
+                                Text("Loading film…")
+                                    .font(.custom("Georgia-Italic", size: 14))
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
                         } else {
+                            // No video saved
                             VStack(spacing: 12) {
                                 Image(systemName: "film")
                                     .font(.system(size: 36))
@@ -122,27 +126,26 @@ struct ArchiveDetailView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 36)
 
-                    // MARK: Reflection section
-                    if hasReflection {
+                    // MARK: Reflection
+                    if entry.hasReflection {
                         ReflectionAnswersSection(
                             lens: lens,
                             answer1: entry.reflectionAnswer1,
                             answer2: entry.reflectionAnswer2
                         )
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 52)
+                        .padding(.bottom, 120)
                     } else {
-                        // No reflections — offer to start
                         NoReflectionSection {
                             navigateToReflection = true
                         }
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 52)
+                        .padding(.bottom, 120)
                     }
                 }
             }
 
-            // Hidden nav link to ReflectionView
+            // NavigationLink to ReflectionView for late reflection
             NavigationLink(
                 destination: ReflectionView(
                     lens: lens,
@@ -155,24 +158,14 @@ struct ArchiveDetailView: View {
                 .hidden()
         }
         .navigationBarHidden(true)
-        .onAppear { setupPlayer() }
-        .onDisappear { player?.pause() }
-    }
-
-    // MARK: - Helpers
-
-    private func setupPlayer() {
-        guard let url = videoURL else { return }
-        let item = AVPlayerItem(url: url)
-        let avPlayer = AVPlayer(playerItem: item)
-        // Loop
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: item,
-            queue: .main
-        ) { _ in avPlayer.seek(to: .zero); avPlayer.play() }
-        avPlayer.play()
-        player = avPlayer
+        .onAppear {
+            if let url = videoURL {
+                playerHolder.setup(url: url)
+            }
+        }
+        .onDisappear {
+            playerHolder.pause()
+        }
     }
 
     private func formattedDate(_ date: Date) -> String {
@@ -182,29 +175,59 @@ struct ArchiveDetailView: View {
     }
 }
 
-// MARK: - Reflection Answers Section
-// Shows answered questions with their responses.
-private struct ReflectionAnswersSection: View {
+// MARK: - Archive Player Holder
+// Separate class so the player persists across body re-renders
+final class ArchivePlayerHolder: ObservableObject {
+    @Published var isReady = false
+    private(set) var player: AVPlayer?
+    private var looper: AVPlayerLooper?
+    private var observation: NSKeyValueObservation?
 
+    func setup(url: URL) {
+        // Verify file exists on disk
+        let path = url.path
+        guard FileManager.default.fileExists(atPath: path) else {
+            print("⚠️ Video file not found at: \(path)")
+            return
+        }
+
+        let item = AVPlayerItem(url: url)
+        let queuePlayer = AVQueuePlayer(playerItem: item)
+        looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+
+        // Observe status to show player only when ready
+        observation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            DispatchQueue.main.async {
+                if item.status == .readyToPlay {
+                    self?.isReady = true
+                    queuePlayer.play()
+                }
+            }
+        }
+
+        player = queuePlayer
+    }
+
+    func pause() {
+        player?.pause()
+    }
+}
+
+// MARK: - Reflection Answers Section
+private struct ReflectionAnswersSection: View {
     let lens: DirectorLens
     let answer1: String
     let answer2: String
 
     var body: some View {
         VStack(spacing: 0) {
-
-            // Divider header
             HStack(spacing: 12) {
-                Rectangle()
-                    .fill(.white.opacity(0.1))
-                    .frame(height: 1)
+                Rectangle().fill(.white.opacity(0.1)).frame(height: 1)
                 Text("Reflection")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.3))
                     .tracking(1.5)
-                Rectangle()
-                    .fill(.white.opacity(0.1))
-                    .frame(height: 1)
+                Rectangle().fill(.white.opacity(0.1)).frame(height: 1)
             }
             .padding(.bottom, 24)
 
@@ -220,9 +243,8 @@ private struct ReflectionAnswersSection: View {
     }
 }
 
-// MARK: - Single Reflection Card
+// MARK: - Reflection Card
 private struct ReflectionCard: View {
-
     let question: String
     let answer: String
     let isYesNo: Bool
@@ -235,16 +257,12 @@ private struct ReflectionCard: View {
                 .lineSpacing(3)
 
             if isYesNo {
-                // Render Yes/No as a pill badge
                 Text(answer)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color(white: 0.06))
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(.white)
-                    )
+                    .background(Capsule().fill(.white))
             } else {
                 Text(answer)
                     .font(.system(size: 15, weight: .light))
@@ -266,25 +284,18 @@ private struct ReflectionCard: View {
 }
 
 // MARK: - No Reflection Section
-// Shown when the user skipped both reflection questions.
 private struct NoReflectionSection: View {
-
     let onStartReflecting: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
-
             HStack(spacing: 12) {
-                Rectangle()
-                    .fill(.white.opacity(0.1))
-                    .frame(height: 1)
+                Rectangle().fill(.white.opacity(0.1)).frame(height: 1)
                 Text("Reflection")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.3))
                     .tracking(1.5)
-                Rectangle()
-                    .fill(.white.opacity(0.1))
-                    .frame(height: 1)
+                Rectangle().fill(.white.opacity(0.1)).frame(height: 1)
             }
 
             VStack(spacing: 8) {
@@ -298,9 +309,7 @@ private struct NoReflectionSection: View {
                     .multilineTextAlignment(.center)
             }
 
-            Button {
-                onStartReflecting()
-            } label: {
+            Button { onStartReflecting() } label: {
                 Text("Start reflecting")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color(white: 0.06))

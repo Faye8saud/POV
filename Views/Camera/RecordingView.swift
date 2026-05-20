@@ -6,14 +6,24 @@
 //
 import SwiftUI
 import AVFoundation
+import SwiftData
 
 // MARK: - Recording View (entry point — injects modelContext + hideTabBar binding)
 struct RecordingView: View {
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.localModelContainer) private var localContainer: ModelContainer?
     @Binding var hideTabBar: Bool
 
     var body: some View {
-        RecordingViewInner(session: RecordingSession(modelContext: modelContext),
+        let context: ModelContext = {
+            if let c = localContainer { return c.mainContext }
+            // Fallback — should never happen in production
+            let fallback = try! ModelContainer(
+                for: Schema([RecordingSessionModel.self, RecordedClipModel.self]),
+                configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            )
+            return fallback.mainContext
+        }()
+        RecordingViewInner(session: RecordingSession(modelContext: context),
                            hideTabBar: $hideTabBar)
     }
 }

@@ -29,21 +29,22 @@ struct HomeView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 4) {
  
-                    Text(homeModel.dateTitle)
-                        .font(.system(size: 14, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Color("text 2"))
-                        .tracking(1.5)
-                        .padding(.horizontal, 24)
- 
-                    Text("How do you want to feel?")
-                        .font(.custom("Georgia-Italic", size: 24))
-                        .foregroundStyle(Color("text 1"))
-                        .padding(.horizontal, 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(homeModel.dateTitle)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color("text 2"))
+                            .tracking(1.5)
+                        Text("How do you want today to feel?")
+                            .font(.custom("Georgia-Italic", size: 20))
+                            .foregroundStyle(Color("text 1"))
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 60)
  
                     MoodSelectorView(moods: POVData.moods, selectedMood: $homeModel.selectedMood)
-                        .padding(.top, 24)
+                        .padding(.top, 10)
  
-                    Spacer().frame(height: 16)
+                    Spacer().frame(height: 20)
  
                     Text("Explore directors lenses")
                         .font(.custom("Georgia-Bold", size: 16))

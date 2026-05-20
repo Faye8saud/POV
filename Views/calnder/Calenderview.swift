@@ -14,9 +14,40 @@ struct CalendarView: View {
 
     @Query(sort: \DayEntry.date, order: .reverse) private var entries: [DayEntry]
 
-    // Group entries by month
-    private var months: [MonthGroup] {
+    // Months with entries
+    private var recordedMonths: [MonthGroup] {
         MonthGroup.build(from: entries)
+    }
+
+    // Full deck: current + next 5 months on top, then past recorded months below
+    private var allMonths: [MonthGroup] {
+        let recorded = recordedMonths
+        let recordedKeys = Set(recorded.map { "\($0.monthName)-\($0.year)" })
+
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+
+        // Current month + next 5 (6 total), recorded or placeholder
+        var upcomingAndCurrent: [MonthGroup] = []
+        for offset in 0..<6 {
+            guard let date = calendar.date(byAdding: .month, value: offset, to: Date()) else { continue }
+            let name = formatter.string(from: date)
+            let year = calendar.component(.year, from: date)
+            let key = "\(name)-\(year)"
+            if let existing = recorded.first(where: { "\($0.monthName)-\($0.year)" == key }) {
+                upcomingAndCurrent.append(existing)
+            } else {
+                upcomingAndCurrent.append(MonthGroup(monthName: name, year: year, entries: []))
+            }
+        }
+
+        // Past recorded months that aren't in the upcoming window
+        let upcomingKeys = Set(upcomingAndCurrent.map { "\($0.monthName)-\($0.year)" })
+        let pastRecorded = recorded.filter { !upcomingKeys.contains("\($0.monthName)-\($0.year)") }
+
+        // Current month first, then future months, then past recorded at the bottom
+        return upcomingAndCurrent + pastRecorded
     }
 
     var body: some View {
@@ -29,7 +60,7 @@ struct CalendarView: View {
                         .padding(.top, 82)
                         .padding(.bottom, 22)
 
-                    if months.isEmpty {
+                    if allMonths.isEmpty {
                         emptyState
                     } else {
                         cardStack
@@ -76,11 +107,19 @@ struct CalendarView: View {
 
     private var cardStack: some View {
         ZStack(alignment: .top) {
-            ForEach(Array(months.enumerated()), id: \.element.id) { index, month in
-                NavigationLink(destination: ArchiveView(month: month)) {
-                    monthCard(month, index: index)
+            ForEach(Array(allMonths.enumerated()), id: \.element.id) { index, month in
+                Group {
+                    if month.entries.isEmpty {
+                        // Empty/upcoming month — gray, not tappable
+                        monthCard(month, index: index)
+                    } else {
+                        // Recorded month — tappable, navigates to archive
+                        NavigationLink(destination: ArchiveView(month: month)) {
+                            monthCard(month, index: index)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
                 .offset(y: CGFloat(index) * 104)
                 .zIndex(Double(index))
             }
@@ -90,7 +129,7 @@ struct CalendarView: View {
     }
 
     private var cardStackHeight: CGFloat {
-        210 + CGFloat(max(months.count - 1, 0)) * 104
+        210 + CGFloat(max(allMonths.count - 1, 0)) * 104
     }
 
     // MARK: - Month Card
@@ -102,7 +141,10 @@ struct CalendarView: View {
         return ZStack(alignment: .bottomLeading) {
             // Background — dominant mood color gradient
             ZStack {
-                if let mood = dominantMood {
+                if month.entries.isEmpty {
+                    // Empty month — flat gray
+                    Color(white: 0.13)
+                } else if let mood = dominantMood {
                     LinearGradient(
                         colors: [mood.color, mood.color.opacity(0.3)],
                         startPoint: .topLeading,
@@ -115,12 +157,12 @@ struct CalendarView: View {
                         endRadius: 220
                     )
                 } else {
-                    Color(white: 0.12)
+                    Color(white: 0.13)
                 }
 
                 // Subtle texture stripe
                 Rectangle()
-                    .fill(.white.opacity(0.04))
+                    .fill(.white.opacity(month.entries.isEmpty ? 0.02 : 0.04))
                     .frame(height: 90)
                     .rotationEffect(.degrees(index.isMultiple(of: 2) ? -8 : 10))
                     .offset(y: CGFloat(index % 3) * 28 - 20)
@@ -154,18 +196,22 @@ struct CalendarView: View {
                 Spacer()
 
                 VStack(alignment: .leading, spacing: 4) {
-                    if let mood = dominantMood {
+                    if month.entries.isEmpty {
+                        Text("Nothing yet")
+                            .font(.custom("Georgia-Italic", size: 16))
+                            .foregroundColor(.white.opacity(0.25))
+                    } else if let mood = dominantMood {
                         Text(mood.name)
                             .font(.custom("Georgia-Italic", size: 18))
                             .foregroundColor(.white.opacity(0.95))
+                        HStack(spacing: 4) {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 7, weight: .bold))
+                            Text("\(month.entries.count) \(month.entries.count == 1 ? "day" : "days")")
+                                .font(.custom("Georgia-Italic", size: 12))
+                        }
+                        .foregroundColor(.white.opacity(0.75))
                     }
-                    HStack(spacing: 4) {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 7, weight: .bold))
-                        Text("\(month.entries.count) \(month.entries.count == 1 ? "day" : "days")")
-                            .font(.custom("Georgia-Italic", size: 12))
-                    }
-                    .foregroundColor(.white.opacity(0.75))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)

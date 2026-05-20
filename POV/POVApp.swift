@@ -33,6 +33,7 @@ struct POVApp: App {
         }
     }()
 
+    // MARK: - Cloud container (DayEntry — synced to CloudKit)
     let cloudContainer: ModelContainer = {
         let schema = Schema([DayEntry.self])
         do {
@@ -51,23 +52,31 @@ struct POVApp: App {
             )
         }
     }()
-    init() {
-           print("Local container: \(localContainer)")
-           print("Cloud container: \(cloudContainer)")
-       }
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
-
-                .modelContainer(localContainer)
+                // cloudContainer is primary so @Query(DayEntry) works in CalendarView
+                .modelContainer(cloudContainer)
+                // localContainer passed explicitly for RecordingView
+                .environment(\.localModelContainer, localContainer)
                 .environment(\.cloudModelContext, cloudContainer.mainContext)
                 .environment(\.cloudContainer, cloudContainer)
-
                 .preferredColorScheme(.dark)
-                .modelContainer(for: [EntryModel.self, RecordedClipModel.self, ReflectionAnswer.self])
-
         }
+    }
+}
+
+// MARK: - Environment Key: local ModelContainer (clips + sessions)
+// Uses Optional to avoid a try! at declaration time
+struct LocalModelContainerKey: EnvironmentKey {
+    static let defaultValue: ModelContainer? = nil
+}
+
+extension EnvironmentValues {
+    var localModelContainer: ModelContainer? {
+        get { self[LocalModelContainerKey.self] }
+        set { self[LocalModelContainerKey.self] = newValue }
     }
 }
 
@@ -85,15 +94,11 @@ extension EnvironmentValues {
 
 // MARK: - Environment Key: cloud ModelContainer
 struct CloudModelContainerKey: EnvironmentKey {
-    // Safe non-optional default using an in-memory DayEntry container
-    static let defaultValue: ModelContainer = try! ModelContainer(
-        for: DayEntry.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
+    static let defaultValue: ModelContainer? = nil
 }
 
 extension EnvironmentValues {
-    var cloudContainer: ModelContainer {
+    var cloudContainer: ModelContainer? {
         get { self[CloudModelContainerKey.self] }
         set { self[CloudModelContainerKey.self] = newValue }
     }
