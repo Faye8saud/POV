@@ -14,7 +14,8 @@ struct ReflectionView: View {
     let date: Date
     let mergedVideoURL: URL?
     let moodName: String
-
+    let onSaveComplete: () -> Void
+    
     // Use both — cloudContext for CloudKit, modelContext as guaranteed fallback
     @Environment(\.cloudModelContext) private var cloudContext
     @Environment(\.modelContext) private var modelContext
@@ -177,26 +178,25 @@ struct ReflectionView: View {
     }
 
     private func saveAndFinish() {
-        guard !isSaving else { return }
-        isSaving = true
+          guard !isSaving else { return }
+          isSaving = true
 
-        let entry = DayEntry(
-            date: date,
-            moodName: moodName,
-            directorName: lens.name,
-            directorStyle: lens.styleDescription,
-            reflectionAnswer1: answer1,
-            reflectionAnswer2: answer2,
-            mergedVideoURL: mergedVideoURL?.absoluteString ?? ""
-        )
+          let entry = DayEntry(
+              date: date,
+              moodName: moodName,
+              directorName: lens.name,
+              directorStyle: lens.styleDescription,
+              reflectionAnswer1: answer1,
+              reflectionAnswer2: answer2,
+              mergedVideoURL: mergedVideoURL?.lastPathComponent ?? ""
+          )
 
-        // Prefer cloudContext (CloudKit sync), fall back to local modelContext
-        let context = cloudContext ?? modelContext
-        context.insert(entry)
-        try? context.save()
+          let context = cloudContext ?? modelContext
+          context.insert(entry)
+          try? context.save()
 
-        selectedTab.wrappedValue = .archive
-    }
+          onSaveComplete()          
+      }
 }
 
 // MARK: - Yes / No Selector

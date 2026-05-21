@@ -18,7 +18,7 @@ struct VideoView: View {
     let aspectRatio: CameraManager.AspectRatio
     let onStartReflecting: () -> Void
     let onSaveComplete: () -> Void
-    
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.cloudModelContext) private var cloudContext
     @Environment(\.selectedPOVTab) private var selectedTab
@@ -26,9 +26,7 @@ struct VideoView: View {
     @StateObject private var playerHolder = QueuePlayerHolder()
     @StateObject private var merger = VideoMerger()
 
-    // Navigation to reflection
     @State private var navigateToReflection = false
-    // If user skips reflection entirely — save entry with empty answers and go to archive
     @State private var showSkipAlert = false
 
     var body: some View {
@@ -53,9 +51,7 @@ struct VideoView: View {
 
                     Spacer()
 
-                    Button {
-                        showSkipAlert = true
-                    } label: {
+                    Button { showSkipAlert = true } label: {
                         Text("Save & Skip")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.white.opacity(0.55))
@@ -82,8 +78,7 @@ struct VideoView: View {
 
                     if merger.isMerging {
                         VStack(spacing: 12) {
-                            ProgressView()
-                                .tint(.white)
+                            ProgressView().tint(.white)
                             Text("Preparing your film…")
                                 .font(.custom("Georgia-Italic", size: 14))
                                 .foregroundStyle(.white.opacity(0.5))
@@ -109,7 +104,6 @@ struct VideoView: View {
                 VStack(spacing: 6) {
                     Text("A film of your day")
                         .font(.custom("Georgia-Italic", size: 20))
-                      //  .font(.system(size: 20, weight: .light))
                         .italic()
                         .foregroundStyle(.white)
                     Text("In the lens of \(lens.name)")
@@ -149,7 +143,8 @@ struct VideoView: View {
                     lens: lens,
                     date: date,
                     mergedVideoURL: merger.mergedURL,
-                    moodName: clips.first?.moodName ?? ""
+                    moodName: clips.first?.moodName ?? "",
+                    onSaveComplete: onSaveComplete
                 ),
                 isActive: $navigateToReflection
             ) { EmptyView() }
@@ -178,25 +173,9 @@ struct VideoView: View {
         }
     }
 
-    // MARK: - Save entry with empty reflection and navigate to archive
+    // MARK: - Save & Skip (no reflection)
     private func saveEntryAndGoToArchive(answer1: String, answer2: String) {
-        guard let context = cloudContext,
-              let videoURL = merger.mergedURL else {
-            // Merge not done yet — save with empty URL as fallback
-            let entry = DayEntry(
-                date: date,
-                moodName: clips.first?.moodName ?? "",
-                directorName: lens.name,
-                directorStyle: lens.styleDescription,
-                reflectionAnswer1: answer1,
-                reflectionAnswer2: answer2,
-                mergedVideoURL: merger.mergedURL?.absoluteString ?? ""
-            )
-            try? cloudContext?.save()
-            _ = entry
-            selectedTab.wrappedValue = .archive
-            return
-        }
+        guard let context = cloudContext else { return }
 
         let entry = DayEntry(
             date: date,
@@ -205,12 +184,11 @@ struct VideoView: View {
             directorStyle: lens.styleDescription,
             reflectionAnswer1: answer1,
             reflectionAnswer2: answer2,
-            mergedVideoURL: videoURL.absoluteString
+            mergedVideoURL: merger.mergedURL?.lastPathComponent ?? ""
         )
         context.insert(entry)
         try? context.save()
         onSaveComplete()
-        selectedTab.wrappedValue = .archive
     }
 
     private var formattedDate: String {
@@ -221,12 +199,10 @@ struct VideoView: View {
 }
 
 // MARK: - Queue Player Holder
-// REPLACE the entire QueuePlayerHolder class with this:
 final class QueuePlayerHolder: ObservableObject {
     let player = AVQueuePlayer()
     private var looper: AVPlayerLooper?
 
-    // Called initially with raw clips for immediate playback while merge runs
     func setupWithClips(_ clips: [RecordedClipModel]) {
         looper = nil
         player.removeAllItems()
@@ -234,7 +210,6 @@ final class QueuePlayerHolder: ObservableObject {
         sorted.map { AVPlayerItem(url: $0.url) }.forEach { player.insert($0, after: nil) }
     }
 
-    // Called once merge is complete — switches to the cropped, merged file
     func switchToMerged(url: URL) {
         looper = nil
         player.removeAllItems()
@@ -243,8 +218,7 @@ final class QueuePlayerHolder: ObservableObject {
         player.play()
     }
 }
-// MARK: - Video Merger
-// Merges all clips into one .mov file saved permanently in Documents directory.
+
 // MARK: - Video Merger
 @MainActor
 final class VideoMerger: ObservableObject {
@@ -252,7 +226,6 @@ final class VideoMerger: ObservableObject {
     @Published var mergedURL: URL? = nil
     @Published var error: Error? = nil
 
-    // Pass the aspect ratio so we can crop correctly
     func merge(clips: [RecordedClipModel], aspectRatio: CameraManager.AspectRatio = .ratio5_3) {
         guard !clips.isEmpty, mergedURL == nil else { return }
         isMerging = true
@@ -293,22 +266,19 @@ final class VideoMerger: ObservableObject {
         else { throw MergeError.trackCreationFailed }
 
         var currentTime = CMTime.zero
-        var naturalSize = CGSize(width: 1920, height: 1080) // fallback
+        var naturalSize = CGSize(width: 1920, height: 1080)
         var storedTransform = CGAffineTransform.identity
-        
+
         for clip in clips {
             let asset = AVURLAsset(url: clip.url)
             let duration = try await asset.load(.duration)
-
             let timeRange = CMTimeRange(start: .zero, duration: duration)
 
             if let srcVideo = try await asset.loadTracks(withMediaType: .video).first {
                 try videoTrack.insertTimeRange(timeRange, of: srcVideo, at: currentTime)
-                // Grab natural size and transform from first clip only
                 if currentTime == .zero {
                     naturalSize = try await srcVideo.load(.naturalSize)
                     storedTransform = try await srcVideo.load(.preferredTransform)
-                    // Do NOT swap width/height here — buildVideoComposition handles rotation
                 }
             }
 
@@ -319,11 +289,10 @@ final class VideoMerger: ObservableObject {
             currentTime = CMTimeAdd(currentTime, duration)
         }
 
-        // ✅ Build a video composition that crops to the selected aspect ratio
         let videoComposition = try await buildVideoComposition(
             for: composition,
             naturalSize: naturalSize,
-            preferredTransform: storedTransform,   // PASS IT HERE
+            preferredTransform: storedTransform,
             aspectRatio: aspectRatio
         )
 
@@ -339,7 +308,7 @@ final class VideoMerger: ObservableObject {
         exporter.outputURL = outputURL
         exporter.outputFileType = .mov
         exporter.shouldOptimizeForNetworkUse = false
-        exporter.videoComposition = videoComposition  // ✅ apply crop
+        exporter.videoComposition = videoComposition
 
         await exporter.export()
 
@@ -350,7 +319,6 @@ final class VideoMerger: ObservableObject {
         return outputURL
     }
 
-    // ✅ Crops the rendered frame to match your preview aspect ratio
     private static func buildVideoComposition(
         for composition: AVMutableComposition,
         naturalSize: CGSize,
@@ -362,39 +330,27 @@ final class VideoMerger: ObservableObject {
             throw MergeError.trackCreationFailed
         }
 
-        // Determine display size and the corrected transform
-        // iPhone video tracks store raw sensor dimensions (e.g. 1080x1920 stored as 1920x1080)
-        // with a preferredTransform that rotates it into display orientation.
-        // We need to figure out what the "upright" size actually is.
-
         let t = preferredTransform
-        let isPortrait = abs(t.b) == 1 && abs(t.c) == 1  // 90 or 270 degree rotation
+        let isPortrait = abs(t.b) == 1 && abs(t.c) == 1
 
         let displaySize: CGSize = isPortrait
             ? CGSize(width: naturalSize.height, height: naturalSize.width)
             : naturalSize
 
-        // Compute the corrected origin-anchored transform for each rotation case
-        // These four cases cover all standard iPhone orientations
         let correctedTransform: CGAffineTransform
         if t.a == 0 && t.b == 1 && t.c == -1 && t.d == 0 {
-            // 90° clockwise (home button left / landscape right recording, displayed portrait)
             correctedTransform = CGAffineTransform(a: 0, b: 1, c: -1, d: 0,
                                                    tx: naturalSize.height, ty: 0)
         } else if t.a == 0 && t.b == -1 && t.c == 1 && t.d == 0 {
-            // 90° counter-clockwise
             correctedTransform = CGAffineTransform(a: 0, b: -1, c: 1, d: 0,
                                                    tx: 0, ty: naturalSize.width)
         } else if t.a == -1 && t.b == 0 && t.c == 0 && t.d == -1 {
-            // 180° (upside down)
             correctedTransform = CGAffineTransform(a: -1, b: 0, c: 0, d: -1,
                                                    tx: naturalSize.width, ty: naturalSize.height)
         } else {
-            // 0° / identity (landscape, no rotation needed)
             correctedTransform = .identity
         }
 
-        // Output size for the chosen aspect ratio
         let outputSize: CGSize = {
             switch aspectRatio {
             case .ratioFull, .ratio16_9:
@@ -409,16 +365,13 @@ final class VideoMerger: ObservableObject {
             }
         }()
 
-        // Center-crop shift (in display space)
         let cropOffsetX = (displaySize.width  - outputSize.width)  / 2
         let cropOffsetY = (displaySize.height - outputSize.height) / 2
 
-        // Apply crop offset on top of the corrected transform
         var finalTransform = correctedTransform
         finalTransform.tx -= cropOffsetX
         finalTransform.ty -= cropOffsetY
 
-        // Build composition
         let videoComposition = AVMutableVideoComposition()
         videoComposition.renderSize = outputSize
         videoComposition.frameDuration = CMTimeMake(value: 1, timescale: 30)

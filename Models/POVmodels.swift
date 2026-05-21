@@ -220,9 +220,24 @@ final class DayEntry {
     }
 
     var videoURL: URL? {
-        URL(string: mergedVideoURL)
-    }
+        guard !mergedVideoURL.isEmpty else { return nil }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
 
+        if !mergedVideoURL.contains("/") {
+            return docs.appendingPathComponent(mergedVideoURL)
+        }
+
+        let filename: String
+        if let url = URL(string: mergedVideoURL), url.scheme != nil {
+            filename = url.lastPathComponent
+        } else {
+            filename = (mergedVideoURL as NSString).lastPathComponent
+        }
+
+        guard !filename.isEmpty else { return nil }
+        return docs.appendingPathComponent(filename)
+    }
+    
     var hasReflection: Bool {
         !reflectionAnswer1.isEmpty || !reflectionAnswer2.isEmpty
     }

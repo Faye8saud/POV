@@ -37,11 +37,26 @@ struct ArchiveDetailView: View {
 
     private var videoURL: URL? {
         guard !entry.mergedVideoURL.isEmpty else { return nil }
-        // Try as-is first (full URL string), then as a bare path
-        if let url = URL(string: entry.mergedVideoURL), url.scheme != nil {
-            return url
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+
+        // Extract just the filename regardless of what's stored
+        let filename: String
+        if entry.mergedVideoURL.contains("/") {
+            // Legacy full path or file:// URL — extract filename
+            if let url = URL(string: entry.mergedVideoURL), url.scheme != nil {
+                filename = url.lastPathComponent
+            } else {
+                filename = (entry.mergedVideoURL as NSString).lastPathComponent
+            }
+        } else {
+            // Already just a filename
+            filename = entry.mergedVideoURL
         }
-        return URL(fileURLWithPath: entry.mergedVideoURL)
+
+        guard !filename.isEmpty else { return nil }
+        let fullURL = docs.appendingPathComponent(filename)
+        print("🔧 Reconstructed URL: \(fullURL.path)")
+        return fullURL
     }
 
     var body: some View {
@@ -151,7 +166,8 @@ struct ArchiveDetailView: View {
                     lens: lens,
                     date: entry.date,
                     mergedVideoURL: videoURL,
-                    moodName: entry.moodName
+                    moodName: entry.moodName,
+                    onSaveComplete: { navigateToReflection = false }
                 ),
                 isActive: $navigateToReflection
             ) { EmptyView() }
@@ -179,33 +195,59 @@ struct ArchiveDetailView: View {
 // Separate class so the player persists across body re-renders
 final class ArchivePlayerHolder: ObservableObject {
     @Published var isReady = false
-    private(set) var player: AVPlayer?
+    private(set) var player: AVQueuePlayer?
     private var looper: AVPlayerLooper?
-    private var observation: NSKeyValueObservation?
+    private var timeObserver: Any?
 
     func setup(url: URL) {
-        // Verify file exists on disk
         let path = url.path
+        print("🎬 Video URL: \(url)")
+        print("📁 File exists: \(FileManager.default.fileExists(atPath: path))")
+
         guard FileManager.default.fileExists(atPath: path) else {
             print("⚠️ Video file not found at: \(path)")
             return
         }
 
-        let item = AVPlayerItem(url: url)
-        let queuePlayer = AVQueuePlayer(playerItem: item)
-        looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+        let templateItem = AVPlayerItem(url: url)
+        let queuePlayer = AVQueuePlayer()
+        looper = AVPlayerLooper(player: queuePlayer, templateItem: templateItem)
+        self.player = queuePlayer
 
-        // Observe status to show player only when ready
-        observation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-            DispatchQueue.main.async {
-                if item.status == .readyToPlay {
-                    self?.isReady = true
-                    queuePlayer.play()
-                }
-            }
+        // Observe currentItem directly
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemFailedToPlayToEndTime,
+            object: nil,
+            queue: .main
+        ) { notification in
+            print("❌ AVPlayerItem failed: \(notification.userInfo ?? [:])")
         }
 
-        player = queuePlayer
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemNewErrorLogEntry,
+            object: nil,
+            queue: .main
+        ) { _ in
+            print("❌ Error log: \(templateItem.errorLog()?.extendedLogData().map { String(data: $0, encoding: .utf8) } ?? nil ?? "none")")
+        }
+
+        // Watch player status directly
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            print("⏱ Player status after 0.5s: \(queuePlayer.status.rawValue)")
+            print("⏱ CurrentItem status: \(String(describing: queuePlayer.currentItem?.status.rawValue))")
+            print("⏱ CurrentItem error: \(String(describing: queuePlayer.currentItem?.error))")
+            print("⏱ Looper status: \(self?.looper?.loopingPlayerItems.first?.status.rawValue ?? -1)")
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            print("⏱ Player status after 2s: \(queuePlayer.status.rawValue)")
+            print("⏱ CurrentItem status: \(String(describing: queuePlayer.currentItem?.status.rawValue))")
+            print("⏱ CurrentItem error: \(String(describing: queuePlayer.currentItem?.error))")
+            print("⏱ Looper item count: \(self?.looper?.loopingPlayerItems.count ?? -1)")
+            self?.isReady = true // force show player regardless
+        }
+
+        queuePlayer.play()
     }
 
     func pause() {

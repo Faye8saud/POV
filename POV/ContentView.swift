@@ -11,13 +11,13 @@ import SwiftData
 struct ContentView: View {
 
     @State private var selectedTab: POVTab = .record
-    @State private var hideTabBar: Bool = false   // VideoView / ReflectionView raise this
+    @State private var hideTabBar: Bool = false
+    @State private var savedEntryDate: Date? = nil     // ← add this
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
 
-                // MARK: Main Content
                 Group {
                     switch selectedTab {
                     case .record:
@@ -32,14 +32,13 @@ struct ContentView: View {
 
                     case .archive:
                         NavigationStack {
-                            CalendarView()
+                            CalendarView(initialEntryDate: savedEntryDate)  // ← pass date
                         }
                         .transition(.opacity)
                     }
                 }
                 .animation(.easeInOut(duration: 0.25), value: selectedTab)
 
-                // MARK: Persistent Tab Bar — uses GeometryReader for reliable safe area
                 if !hideTabBar {
                     POVTabBar(selectedTab: $selectedTab, isRecording: false)
                         .padding(.bottom, geo.safeAreaInsets.bottom + 20)
@@ -51,12 +50,28 @@ struct ContentView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .environment(\.selectedPOVTab, $selectedTab)
+        .environment(\.onSaveComplete, {          // ← add this environment action
+            hideTabBar = false
+            savedEntryDate = Date()
+            selectedTab = .archive
+        })
     }
 }
 
 // MARK: - Environment Key for selectedTab
 struct SelectedPOVTabKey: EnvironmentKey {
     static let defaultValue: Binding<POVTab> = .constant(.record)
+}
+
+struct OnSaveCompleteKey: EnvironmentKey {
+    static let defaultValue: () -> Void = {}
+}
+
+extension EnvironmentValues {
+    var onSaveComplete: () -> Void {
+        get { self[OnSaveCompleteKey.self] }
+        set { self[OnSaveCompleteKey.self] = newValue }
+    }
 }
 
 extension EnvironmentValues {

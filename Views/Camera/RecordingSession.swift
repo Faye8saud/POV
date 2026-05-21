@@ -13,6 +13,7 @@ enum SessionPhase: String, Codable {
     case idle
     case shooting
     case wrapping
+    case completed
 }
 
 // MARK: - Session Manager (ObservableObject wrapping SwiftData model)
@@ -33,7 +34,7 @@ final class RecordingSession: ObservableObject {
     @Published var activeLensName: String   = ""
 
     var recordedAspectRatio: CameraManager.AspectRatio = .ratio5_3
-    
+    var isCompleted: Bool { phase == .completed }
     // MARK: SwiftData
     private let modelContext: ModelContext
     private var model: RecordingSessionModel
@@ -137,6 +138,20 @@ final class RecordingSession: ObservableObject {
         syncFromModel()
     }
 
+    func markSavedAndReset() {
+        model.clips.forEach { try? FileManager.default.removeItem(at: $0.url) }
+        for clip in model.clips {
+            modelContext.delete(clip)
+        }
+        model.clips.removeAll()
+        model.currentPromptIndex = 0
+        model.activeMoodName = ""
+        model.activeLensName = ""
+        model.phase = .idle
+        save()
+        syncFromModel()
+    }
+    
     // MARK: - Internals
 
     private func syncFromModel() {

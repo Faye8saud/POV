@@ -1,0 +1,99 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.00000,0.00000,0.00000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "glass" : false,
+          "image-name" : "Ellipse 39.svg",
+          "name" : "Ellipse 39",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              217.34375,
+              -65.390625
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "glass" : false,
+          "image-name" : "Ellipse 40.svg",
+          "name" : "Ellipse 40",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -135.7421875,
+              178.71875
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "glass" : false,
+          "image-name" : "Ellipse 41.svg",
+          "name" : "Ellipse 41",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              132.34375,
+              178.71875
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : "automatic",
+          "glass" : false,
+          "image-name" : "Ellipse 42.svg",
+          "name" : "Ellipse 42",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -220.7421875,
+              -65.390625
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "glass" : false,
+          "image-name" : "Ellipse 43.svg",
+          "name" : "Ellipse 43",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -223.59375
+            ]
+          }
+        },
+        {
+          "blend-mode" : "soft-light",
+          "glass" : false,
+          "image-name" : "Ellipse 38.svg",
+          "name" : "Ellipse 38"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

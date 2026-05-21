@@ -39,7 +39,8 @@ private struct RecordingViewInner: View {
     @State private var selectedLens: DirectorLens? = nil
 
     @Environment(\.selectedPOVTab) private var selectedTab
-
+    @Environment(\.onSaveComplete) private var onSaveComplete
+    
     @State private var showDiscardSheet     = false
     @State private var showWrapSheet        = false
     @State private var navigateToVideo      = false
@@ -111,11 +112,10 @@ private struct RecordingViewInner: View {
     }
 
     private func handleNavigationChange(_ isNavigating: Bool) {
-        // Hide or show the persistent tab bar when entering/leaving VideoView
         withAnimation { hideTabBar = isNavigating }
 
-        if !isNavigating && session.isWrapping {
-            withAnimation { session.reset() }
+        if !isNavigating && (session.isWrapping || session.isShooting) {
+            withAnimation { session.markSavedAndReset() }
             selectedLens = POVData.lenses(for: selectedMood).first
         }
     }
@@ -131,9 +131,18 @@ private struct RecordingViewInner: View {
         camera.setLook(POVData.look(for: lens))
     }
 
-    private func handleAppear() {
-        if session.isWrapping {
-            session.reset()
+        private func handleAppear() {
+            // On relaunch: if session is shooting/wrapping but has no valid clips on disk, it's a ghost session
+            let hasValidClips = session.clips.contains { FileManager.default.fileExists(atPath: $0.url.path) }
+            
+            if (session.isShooting || session.isWrapping) && !hasValidClips {
+                session.markSavedAndReset()
+                selectedLens = POVData.lenses(for: selectedMood).first
+                if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
+                return
+            }
+         if session.isWrapping {
+             session.reset()
             selectedLens = POVData.lenses(for: selectedMood).first
             if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
             return
@@ -227,7 +236,8 @@ private struct RecordingViewInner: View {
                     onStartReflecting: { },
                     onSaveComplete: {
                         withAnimation { hideTabBar = false }
-                        session.reset()
+                        session.markSavedAndReset()
+                        onSaveComplete()
                     }
                 ),
                 isActive: $navigateToVideo

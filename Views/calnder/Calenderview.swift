@@ -7,28 +7,23 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - CalendarView
-// Reads DayEntry from SwiftData and groups them into months for the card stack.
-
 struct CalendarView: View {
 
-    @Query(sort: \DayEntry.date, order: .reverse) private var entries: [DayEntry]
+    var initialEntryDate: Date? = nil
 
-    // Months with entries
+    @Query(sort: \DayEntry.date, order: .reverse) private var entries: [DayEntry]
+    @State private var pushToMonth: MonthGroup? = nil
+
     private var recordedMonths: [MonthGroup] {
         MonthGroup.build(from: entries)
     }
 
-    // Full deck: current + next 5 months on top, then past recorded months below
     private var allMonths: [MonthGroup] {
         let recorded = recordedMonths
-        let recordedKeys = Set(recorded.map { "\($0.monthName)-\($0.year)" })
-
         let calendar = Calendar.current
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM"
 
-        // Current month + next 5 (6 total), recorded or placeholder
         var upcomingAndCurrent: [MonthGroup] = []
         for offset in 0..<6 {
             guard let date = calendar.date(byAdding: .month, value: offset, to: Date()) else { continue }
@@ -42,11 +37,9 @@ struct CalendarView: View {
             }
         }
 
-        // Past recorded months that aren't in the upcoming window
         let upcomingKeys = Set(upcomingAndCurrent.map { "\($0.monthName)-\($0.year)" })
         let pastRecorded = recorded.filter { !upcomingKeys.contains("\($0.monthName)-\($0.year)") }
 
-        // Current month first, then future months, then past recorded at the bottom
         return upcomingAndCurrent + pastRecorded
     }
 
@@ -66,11 +59,43 @@ struct CalendarView: View {
                         cardStack
                     }
                 }
-                .padding(.bottom, 120) // clears persistent tab bar
+                .padding(.bottom, 120)
             }
             .ignoresSafeArea(edges: .top)
+
+            // Hidden navigation link — fires automatically after save
+            NavigationLink(
+                destination: Group {
+                    if let month = pushToMonth {
+                        ArchiveView(month: month)
+                    }
+                },
+                isActive: Binding(
+                    get: { pushToMonth != nil },
+                    set: { if !$0 { pushToMonth = nil } }
+                )
+            ) { EmptyView() }
+                .hidden()
         }
         .navigationBarHidden(true)
+        .onAppear { handleInitialDate() }
+        .onChange(of: entries) { _ in handleInitialDate() }
+    }
+
+    // MARK: - Auto-navigate to saved month
+
+    private func handleInitialDate() {
+        guard let date = initialEntryDate, pushToMonth == nil else { return }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        let monthName = formatter.string(from: date)
+        let year = Calendar.current.component(.year, from: date)
+
+        if let match = allMonths.first(where: {
+            $0.monthName == monthName && $0.year == year && !$0.entries.isEmpty
+        }) {
+            pushToMonth = match
+        }
     }
 
     // MARK: - Header
@@ -110,10 +135,8 @@ struct CalendarView: View {
             ForEach(Array(allMonths.enumerated()), id: \.element.id) { index, month in
                 Group {
                     if month.entries.isEmpty {
-                        // Empty/upcoming month — gray, not tappable
                         monthCard(month, index: index)
                     } else {
-                        // Recorded month — tappable, navigates to archive
                         NavigationLink(destination: ArchiveView(month: month)) {
                             monthCard(month, index: index)
                         }
@@ -139,10 +162,8 @@ struct CalendarView: View {
         let dominantMood = month.dominantMood
 
         return ZStack(alignment: .bottomLeading) {
-            // Background — dominant mood color gradient
             ZStack {
                 if month.entries.isEmpty {
-                    // Empty month — flat gray
                     Color(white: 0.13)
                 } else if let mood = dominantMood {
                     LinearGradient(
@@ -160,7 +181,6 @@ struct CalendarView: View {
                     Color(white: 0.13)
                 }
 
-                // Subtle texture stripe
                 Rectangle()
                     .fill(.white.opacity(month.entries.isEmpty ? 0.02 : 0.04))
                     .frame(height: 90)
@@ -171,14 +191,12 @@ struct CalendarView: View {
             .frame(height: height)
             .frame(maxWidth: .infinity)
 
-            // Gradient overlay for text legibility
             LinearGradient(
                 colors: [Color.black.opacity(0.35), Color.clear, Color.black.opacity(0.5)],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            // Card content
             VStack {
                 HStack(alignment: .top) {
                     Text(month.monthName.uppercased())
@@ -238,15 +256,13 @@ struct CalendarView: View {
 }
 
 // MARK: - MonthGroup
-// Groups DayEntry records by calendar month for display in CalendarView.
 
 struct MonthGroup: Identifiable, Hashable {
     let id: UUID = UUID()
-    let monthName: String   // e.g. "May"
+    let monthName: String
     let year: Int
     let entries: [DayEntry]
 
-    // The mood that appears most in this month's entries
     var dominantMood: Mood? {
         let counts = entries.reduce(into: [String: Int]()) { $0[$1.moodName, default: 0] += 1 }
         guard let topName = counts.max(by: { $0.value < $1.value })?.key else { return nil }
@@ -258,7 +274,6 @@ struct MonthGroup: Identifiable, Hashable {
         formatter.dateFormat = "MMMM"
         let calendar = Calendar.current
 
-        // Key: "May-2026"
         var grouped: [(key: String, monthName: String, year: Int, entries: [DayEntry])] = []
         var seen: [String: Int] = [:]
 
@@ -277,7 +292,6 @@ struct MonthGroup: Identifiable, Hashable {
         return grouped.map { MonthGroup(monthName: $0.monthName, year: $0.year, entries: $0.entries) }
     }
 
-    // Hashable / Equatable by id
     static func == (lhs: MonthGroup, rhs: MonthGroup) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
