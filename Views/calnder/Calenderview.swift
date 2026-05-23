@@ -24,23 +24,37 @@ struct CalendarView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM"
 
-        var upcomingAndCurrent: [MonthGroup] = []
-        for offset in 0..<6 {
-            guard let date = calendar.date(byAdding: .month, value: offset, to: Date()) else { continue }
-            let name = formatter.string(from: date)
-            let year = calendar.component(.year, from: date)
+        let now = Date()
+        let currentMonthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+
+        // Build all months from the earliest recorded entry up to current month
+        var months: [MonthGroup] = []
+
+        // Find the earliest date we care about
+        let earliestEntry = entries.min(by: { $0.date < $1.date })
+        let startDate = earliestEntry.map {
+            calendar.date(from: calendar.dateComponents([.year, .month], from: $0.date))!
+        } ?? currentMonthStart
+
+        // Walk from current month back to startDate
+        var cursor = currentMonthStart
+        while cursor >= startDate {
+            let name = formatter.string(from: cursor)
+            let year = calendar.component(.year, from: cursor)
             let key = "\(name)-\(year)"
+
             if let existing = recorded.first(where: { "\($0.monthName)-\($0.year)" == key }) {
-                upcomingAndCurrent.append(existing)
+                months.append(existing)
             } else {
-                upcomingAndCurrent.append(MonthGroup(monthName: name, year: year, entries: []))
+                // Past or current month with no entries — show as gray
+                months.append(MonthGroup(monthName: name, year: year, entries: []))
             }
+
+            guard let prev = calendar.date(byAdding: .month, value: -1, to: cursor) else { break }
+            cursor = prev
         }
 
-        let upcomingKeys = Set(upcomingAndCurrent.map { "\($0.monthName)-\($0.year)" })
-        let pastRecorded = recorded.filter { !upcomingKeys.contains("\($0.monthName)-\($0.year)") }
-
-        return upcomingAndCurrent + pastRecorded
+        return months
     }
 
     var body: some View {
@@ -215,7 +229,7 @@ struct CalendarView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     if month.entries.isEmpty {
-                        Text("Nothing yet")
+                        Text("Nothing filmed")
                             .font(.custom("Georgia-Italic", size: 16))
                             .foregroundColor(.white.opacity(0.25))
                     } else if let mood = dominantMood {

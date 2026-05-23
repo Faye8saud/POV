@@ -99,22 +99,25 @@ struct ArchiveView: View {
     }
 
     // MARK: - Mood Strip
-
     private func moodStrip(dominant: Mood) -> some View {
         let counts = moodCounts()
-        return HStack(spacing: 10) {
-            ForEach(counts, id: \.name) { item in
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(item.color)
-                        .frame(width: 7, height: 7)
-                    Text(item.name.uppercased())
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(Color("text 2"))
-                        .kerning(1.2)
-                    Text("×\(item.count)")
-                        .font(.system(size: 10))
-                        .foregroundColor(Color("text 2").opacity(0.5))
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 14) {
+                ForEach(counts, id: \.name) { item in
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(item.color)
+                            .frame(width: 6, height: 6)
+                        Text(item.name.uppercased())
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(Color("text 2"))
+                            .kerning(1.2)
+                            .fixedSize()
+                        Text("×\(item.count)")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color("text 2").opacity(0.5))
+                            .fixedSize()
+                    }
                 }
             }
         }

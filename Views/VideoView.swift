@@ -277,8 +277,13 @@ final class VideoMerger: ObservableObject {
             if let srcVideo = try await asset.loadTracks(withMediaType: .video).first {
                 try videoTrack.insertTimeRange(timeRange, of: srcVideo, at: currentTime)
                 if currentTime == .zero {
-                    naturalSize = try await srcVideo.load(.naturalSize)
-                    storedTransform = try await srcVideo.load(.preferredTransform)
+                    let size = try await srcVideo.load(.naturalSize)
+                    let transform = try await srcVideo.load(.preferredTransform)
+                    // Only use if valid
+                    if size.width > 0 && size.height > 0 {
+                        naturalSize = size
+                        storedTransform = transform
+                    }
                 }
             }
 
@@ -337,6 +342,11 @@ final class VideoMerger: ObservableObject {
             ? CGSize(width: naturalSize.height, height: naturalSize.width)
             : naturalSize
 
+        // Guard against zero/invalid dimensions
+        guard displaySize.width > 0 && displaySize.height > 0 else {
+            throw MergeError.trackCreationFailed
+        }
+
         let correctedTransform: CGAffineTransform
         if t.a == 0 && t.b == 1 && t.c == -1 && t.d == 0 {
             correctedTransform = CGAffineTransform(a: 0, b: 1, c: -1, d: 0,
@@ -364,6 +374,11 @@ final class VideoMerger: ObservableObject {
                 return CGSize(width: side, height: side)
             }
         }()
+
+        // Guard against zero output size
+        guard outputSize.width > 0 && outputSize.height > 0 else {
+            throw MergeError.trackCreationFailed
+        }
 
         let cropOffsetX = (displaySize.width  - outputSize.width)  / 2
         let cropOffsetY = (displaySize.height - outputSize.height) / 2

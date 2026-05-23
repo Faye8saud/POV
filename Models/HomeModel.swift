@@ -11,6 +11,7 @@ import SwiftUI
 struct HomeModel {
     var selectedMood: Mood
     var selectedDirector: DirectorLens?
+    var pendingBrief: (mood: Mood, director: DirectorLens)? = nil
     private var currentDate: Date
 
     init(
@@ -37,10 +38,12 @@ struct HomeModel {
 
     mutating func selectDirector(_ director: DirectorLens) {
         selectedDirector = director
+        pendingBrief = (mood: selectedMood, director: director)
     }
 
     mutating func startDay() {
         selectedDirector = nil
+        pendingBrief = nil
     }
 
     mutating func refreshDate(_ date: Date = .now) {

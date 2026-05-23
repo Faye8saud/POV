@@ -155,6 +155,11 @@ struct ReflectionView: View {
         }
         .navigationBarHidden(true)
         .animation(.spring(response: 0.4, dampingFraction: 0.82), value: step)
+        .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+            .navigationBarHidden(true)
+            .animation(.spring(response: 0.4, dampingFraction: 0.82), value: step)
     }
 
     // MARK: - Actions
@@ -178,25 +183,32 @@ struct ReflectionView: View {
     }
 
     private func saveAndFinish() {
-          guard !isSaving else { return }
-          isSaving = true
+        guard !isSaving else { return }
+        
+        // Dismiss keyboard first, then save after a short delay so it doesn't lag
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        
+        isSaving = true
 
-          let entry = DayEntry(
-              date: date,
-              moodName: moodName,
-              directorName: lens.name,
-              directorStyle: lens.styleDescription,
-              reflectionAnswer1: answer1,
-              reflectionAnswer2: answer2,
-              mergedVideoURL: mergedVideoURL?.lastPathComponent ?? ""
-          )
+        let entry = DayEntry(
+            date: date,
+            moodName: moodName,
+            directorName: lens.name,
+            directorStyle: lens.styleDescription,
+            reflectionAnswer1: answer1,
+            reflectionAnswer2: answer2,
+            mergedVideoURL: mergedVideoURL?.lastPathComponent ?? ""
+        )
 
-          let context = cloudContext ?? modelContext
-          context.insert(entry)
-          try? context.save()
+        let context = cloudContext ?? modelContext
+        context.insert(entry)
+        try? context.save()
 
-          onSaveComplete()          
-      }
+        // Small delay so keyboard finishes animating down before navigation fires
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            onSaveComplete()
+        }
+    }
 }
 
 // MARK: - Yes / No Selector

@@ -12,7 +12,8 @@ import SwiftData
 struct RecordingView: View {
     @Environment(\.localModelContainer) private var localContainer: ModelContainer?
     @Binding var hideTabBar: Bool
-
+   
+    
     var body: some View {
         let context: ModelContext = {
             if let c = localContainer { return c.mainContext }
@@ -34,7 +35,7 @@ private struct RecordingViewInner: View {
     @StateObject var session: RecordingSession
     @StateObject private var camera = CameraManager()
     @Binding var hideTabBar: Bool
-
+    @Environment(\.pendingLens) private var pendingLens
     @State private var selectedMood: Mood          = POVData.moods[0]
     @State private var selectedLens: DirectorLens? = nil
 
@@ -131,16 +132,19 @@ private struct RecordingViewInner: View {
         camera.setLook(POVData.look(for: lens))
     }
 
-        private func handleAppear() {
-            // On relaunch: if session is shooting/wrapping but has no valid clips on disk, it's a ghost session
-            let hasValidClips = session.clips.contains { FileManager.default.fileExists(atPath: $0.url.path) }
-            
-            if (session.isShooting || session.isWrapping) && !hasValidClips {
-                session.markSavedAndReset()
-                selectedLens = POVData.lenses(for: selectedMood).first
-                if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
-                return
+    private func handleAppear() {
+        if let pending = pendingLens.wrappedValue {
+            if let mood = POVData.moods.first(where: { $0.name == pending.mood.name }) {
+                selectedMood = mood
+                // Match by name, not identity — DirectorLens.id is a new UUID each call
+                if let lens = POVData.lenses(for: mood).first(where: { $0.name == pending.lens.name }) {
+                    selectedLens = lens
+                    camera.setLook(POVData.look(for: lens))
+                }
             }
+            pendingLens.wrappedValue = nil
+            return
+        }
          if session.isWrapping {
              session.reset()
             selectedLens = POVData.lenses(for: selectedMood).first
@@ -155,8 +159,30 @@ private struct RecordingViewInner: View {
             selectedLens = POVData.lenses(for: selectedMood).first
         }
         if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
+        
+        let hasValidClips = session.clips.contains { FileManager.default.fileExists(atPath: $0.url.path) }
+        if (session.isShooting || session.isWrapping) && !hasValidClips {
+            session.markSavedAndReset()
+            selectedLens = POVData.lenses(for: selectedMood).first
+            if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
+            return
+        }
+        if session.isWrapping {
+            session.reset()
+            selectedLens = POVData.lenses(for: selectedMood).first
+            if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
+            return
+        }
+        if session.isShooting || session.isWrapping,
+           let mood = POVData.moods.first(where: { $0.name == session.activeMoodName }) {
+            selectedMood = mood
+            selectedLens = POVData.lenses(for: mood).first { $0.name == session.activeLensName }
+        } else {
+            selectedLens = POVData.lenses(for: selectedMood).first
+        }
+        if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
     }
-
+    
     // MARK: - Main Content Stack
     @ViewBuilder
     private var mainContent: some View {

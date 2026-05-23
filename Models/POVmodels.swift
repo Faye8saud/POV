@@ -10,7 +10,7 @@ import SwiftData
 
 // MARK: - Mood Model
 struct Mood: Identifiable, Hashable {
-    let id = UUID()
+    var id: String { name }
     let name: String
     let description: String
     let color: Color
@@ -19,7 +19,7 @@ struct Mood: Identifiable, Hashable {
 
 // MARK: - Director / Lens Model
 struct DirectorLens: Identifiable, Hashable {
-    let id = UUID()
+    var id: String { name } 
     let name: String
     let nationality: String
     let styleDescription: String

@@ -8,6 +8,7 @@ import SwiftUI
 import AVKit
 import SwiftData
 import Combine
+import Photos
 
 // MARK: - Archive Detail View
 struct ArchiveDetailView: View {
@@ -17,6 +18,8 @@ struct ArchiveDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var playerHolder = ArchivePlayerHolder()
     @State private var navigateToReflection = false
+    @State private var showSaveSuccess = false
+    @State private var showSaveError = false
 
     private var lens: DirectorLens {
         POVData.moods
@@ -39,17 +42,14 @@ struct ArchiveDetailView: View {
         guard !entry.mergedVideoURL.isEmpty else { return nil }
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
 
-        // Extract just the filename regardless of what's stored
         let filename: String
         if entry.mergedVideoURL.contains("/") {
-            // Legacy full path or file:// URL — extract filename
             if let url = URL(string: entry.mergedVideoURL), url.scheme != nil {
                 filename = url.lastPathComponent
             } else {
                 filename = (entry.mergedVideoURL as NSString).lastPathComponent
             }
         } else {
-            // Already just a filename
             filename = entry.mergedVideoURL
         }
 
@@ -85,7 +85,17 @@ struct ArchiveDetailView: View {
                             .kerning(1.5)
 
                         Spacer()
-                        Color.clear.frame(width: 36, height: 36)
+
+                        Button { saveToGallery() } label: {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundStyle(.white)
+                                .frame(width: 36, height: 36)
+                                .background(Circle().fill(.white.opacity(0.1)))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(videoURL == nil)
+                        .opacity(videoURL == nil ? 0.3 : 1)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
@@ -102,7 +112,6 @@ struct ArchiveDetailView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 .frame(height: 420)
                         } else if videoURL != nil {
-                            // Loading state
                             VStack(spacing: 12) {
                                 ProgressView().tint(.white)
                                 Text("Loading film…")
@@ -110,7 +119,6 @@ struct ArchiveDetailView: View {
                                     .foregroundStyle(.white.opacity(0.4))
                             }
                         } else {
-                            // No video saved
                             VStack(spacing: 12) {
                                 Image(systemName: "film")
                                     .font(.system(size: 36))
@@ -160,7 +168,6 @@ struct ArchiveDetailView: View {
                 }
             }
 
-            // NavigationLink to ReflectionView for late reflection
             NavigationLink(
                 destination: ReflectionView(
                     lens: lens,
@@ -174,6 +181,16 @@ struct ArchiveDetailView: View {
                 .hidden()
         }
         .navigationBarHidden(true)
+        .alert("Saved to Photos", isPresented: $showSaveSuccess) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Your film has been saved to your photo library.")
+        }
+        .alert("Couldn't save", isPresented: $showSaveError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Make sure POV has access to your Photos library in Settings.")
+        }
         .onAppear {
             if let url = videoURL {
                 playerHolder.setup(url: url)
@@ -181,6 +198,33 @@ struct ArchiveDetailView: View {
         }
         .onDisappear {
             playerHolder.pause()
+        }
+    }
+
+    // MARK: - Save to Gallery
+    private func saveToGallery() {
+        guard let url = videoURL else { return }
+
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            DispatchQueue.main.async {
+                guard status == .authorized || status == .limited else {
+                    showSaveError = true
+                    return
+                }
+
+                PHPhotoLibrary.shared().performChanges({
+                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+                }) { success, error in
+                    DispatchQueue.main.async {
+                        if success {
+                            showSaveSuccess = true
+                        } else {
+                            print("❌ Save to gallery failed: \(error?.localizedDescription ?? "unknown")")
+                            showSaveError = true
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -192,7 +236,6 @@ struct ArchiveDetailView: View {
 }
 
 // MARK: - Archive Player Holder
-// Separate class so the player persists across body re-renders
 final class ArchivePlayerHolder: ObservableObject {
     @Published var isReady = false
     private(set) var player: AVQueuePlayer?
@@ -214,7 +257,6 @@ final class ArchivePlayerHolder: ObservableObject {
         looper = AVPlayerLooper(player: queuePlayer, templateItem: templateItem)
         self.player = queuePlayer
 
-        // Observe currentItem directly
         NotificationCenter.default.addObserver(
             forName: .AVPlayerItemFailedToPlayToEndTime,
             object: nil,
@@ -231,7 +273,6 @@ final class ArchivePlayerHolder: ObservableObject {
             print("❌ Error log: \(templateItem.errorLog()?.extendedLogData().map { String(data: $0, encoding: .utf8) } ?? nil ?? "none")")
         }
 
-        // Watch player status directly
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             print("⏱ Player status after 0.5s: \(queuePlayer.status.rawValue)")
             print("⏱ CurrentItem status: \(String(describing: queuePlayer.currentItem?.status.rawValue))")
@@ -244,7 +285,7 @@ final class ArchivePlayerHolder: ObservableObject {
             print("⏱ CurrentItem status: \(String(describing: queuePlayer.currentItem?.status.rawValue))")
             print("⏱ CurrentItem error: \(String(describing: queuePlayer.currentItem?.error))")
             print("⏱ Looper item count: \(self?.looper?.loopingPlayerItems.count ?? -1)")
-            self?.isReady = true // force show player regardless
+            self?.isReady = true
         }
 
         queuePlayer.play()

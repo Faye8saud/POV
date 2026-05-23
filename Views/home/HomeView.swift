@@ -5,18 +5,19 @@
 //  Created by Feda on 12/05/2026.
 //
 import SwiftUI
- 
+
 struct HomeView: View {
- 
+
     @Environment(\.selectedPOVTab) private var selectedTab
     @Environment(\.selectedPOVTab) private var selectedPOVTab
- 
+    @Environment(\.pendingLens) private var pendingLens
+    
     @State private var homeModel = HomeModel()
- 
+
     var body: some View {
         ZStack {
             Color("background 1").ignoresSafeArea()
- 
+
             VStack {
                 Ellipse()
                     .fill(homeModel.moodGlowColor)
@@ -25,10 +26,10 @@ struct HomeView: View {
                     .padding(.top, 400)
             }
             .ignoresSafeArea()
- 
+
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 4) {
- 
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text(homeModel.dateTitle)
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -40,19 +41,19 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 60)
- 
+
                     MoodSelectorView(moods: POVData.moods, selectedMood: $homeModel.selectedMood)
                         .padding(.top, 10)
- 
+
                     Spacer().frame(height: 20)
- 
+
                     Text("Explore directors lenses")
                         .font(.custom("Georgia-Bold", size: 16))
                         .foregroundStyle(Color("text 1"))
                         .padding(.horizontal, 17)
- 
+
                     Spacer().frame(height: 10)
- 
+
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 18) {
                             ForEach(homeModel.directorsForSelectedMood) { director in
@@ -66,24 +67,24 @@ struct HomeView: View {
                         }
                         .padding(.horizontal, 24)
                     }
- 
+
                     Spacer().frame(height: 24)
- 
+
                     Rectangle()
                         .frame(maxWidth: .infinity)
                         .frame(height: 0.5)
                         .foregroundStyle(Color.white.opacity(0.15))
                         .padding(.horizontal, 24)
- 
+
                     Spacer().frame(height: 16)
- 
+
                     // MARK: - Insights Section
                     VStack(alignment: .leading, spacing: 16) {
                         Text("A new insight is ready!")
                             .font(.custom("Georgia-Italic", size: 16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 24)
- 
+
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 16) {
                                 VStack(alignment: .leading, spacing: 12) {
@@ -91,9 +92,9 @@ struct HomeView: View {
                                         .font(.custom("Georgia-Italic", size: 18))
                                         .foregroundColor(.white)
                                         .lineSpacing(4)
- 
+
                                     Spacer()
- 
+
                                     Text("-compared to last week")
                                         .font(.system(size: 11))
                                         .foregroundColor(.gray)
@@ -112,7 +113,7 @@ struct HomeView: View {
                                     RoundedRectangle(cornerRadius: 20)
                                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                                 )
- 
+
                                 VStack { Spacer() }
                                     .frame(width: 165, height: 250)
                                     .background(
@@ -131,15 +132,21 @@ struct HomeView: View {
                             .padding(.horizontal, 24)
                         }
                     }
- 
-                    Spacer().frame(height: 120) // clears persistent tab bar
+
+                    Spacer().frame(height: 120)
                 }
             }
             .ignoresSafeArea()
-            .fullScreenCover(item: $homeModel.selectedDirector) { director in
-                DirectorBriefView(mood: homeModel.selectedMood, director: director) {
-                    homeModel.startDay()
-                    selectedPOVTab.wrappedValue = .record
+            // MARK: - Updated fullScreenCover
+            .fullScreenCover(isPresented: Binding(
+                get: { homeModel.pendingBrief != nil },
+                set: { if !$0 { homeModel.pendingBrief = nil } }
+            )) {
+                if let brief = homeModel.pendingBrief {
+                    DirectorBriefView(mood: brief.mood, director: brief.director) {
+                        pendingLens.wrappedValue = (mood: brief.mood, lens: brief.director)
+                        selectedPOVTab.wrappedValue = .record
+                    }
                 }
             }
             .task {
@@ -152,11 +159,11 @@ struct HomeView: View {
         }
     }
 }
- 
+
 // MARK: - Director Card
 private struct DirectorCard: View {
     let director: DirectorLens
- 
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Image(director.imageName)
@@ -164,18 +171,18 @@ private struct DirectorCard: View {
                 .scaledToFill()
                 .frame(width: 165, height: 130)
                 .clipped()
- 
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(director.name)
                     .font(.custom("Georgia-Bold", size: 16))
                     .foregroundStyle(Color("text 1"))
                     .lineLimit(1)
- 
+
                 Text(director.nationality)
                     .font(.system(size: 11))
                     .foregroundStyle(Color("text 2"))
                     .lineLimit(1)
- 
+
                 Text(director.styleDescription)
                     .font(.system(size: 12))
                     .foregroundStyle(Color("text 2"))
@@ -199,8 +206,8 @@ private struct DirectorCard: View {
         )
     }
 }
- 
+
 #Preview {
     HomeView()
 }
- 
+

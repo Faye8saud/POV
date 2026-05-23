@@ -12,7 +12,9 @@ struct ContentView: View {
 
     @State private var selectedTab: POVTab = .record
     @State private var hideTabBar: Bool = false
-    @State private var savedEntryDate: Date? = nil     // ← add this
+    @State private var savedEntryDate: Date? = nil
+    @State private var pendingLens: (mood: Mood, lens: DirectorLens)? = nil
+    @StateObject private var onboardingVM = OnboardingViewModel()
 
     var body: some View {
         GeometryReader { geo in
@@ -32,7 +34,7 @@ struct ContentView: View {
 
                     case .archive:
                         NavigationStack {
-                            CalendarView(initialEntryDate: savedEntryDate)  // ← pass date
+                            CalendarView(initialEntryDate: savedEntryDate)
                         }
                         .transition(.opacity)
                     }
@@ -47,10 +49,19 @@ struct ContentView: View {
                 }
             }
             .ignoresSafeArea(edges: .bottom)
+
+            if onboardingVM.showOnboarding {
+                OnboardingView(viewModel: onboardingVM)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.4), value: onboardingVM.showOnboarding)
+                    .zIndex(999)
+            }
         }
         .ignoresSafeArea(edges: .bottom)
         .environment(\.selectedPOVTab, $selectedTab)
-        .environment(\.onSaveComplete, {          // ← add this environment action
+        .environment(\.pendingLens, $pendingLens)
+        .environment(\.onSaveComplete, {
             hideTabBar = false
             savedEntryDate = Date()
             selectedTab = .archive
@@ -63,21 +74,30 @@ struct SelectedPOVTabKey: EnvironmentKey {
     static let defaultValue: Binding<POVTab> = .constant(.record)
 }
 
+// MARK: - Environment Key for onSaveComplete
 struct OnSaveCompleteKey: EnvironmentKey {
     static let defaultValue: () -> Void = {}
 }
 
-extension EnvironmentValues {
-    var onSaveComplete: () -> Void {
-        get { self[OnSaveCompleteKey.self] }
-        set { self[OnSaveCompleteKey.self] = newValue }
-    }
+// MARK: - Environment Key for pendingLens
+struct PendingLensKey: EnvironmentKey {
+    static let defaultValue: Binding<(mood: Mood, lens: DirectorLens)?> = .constant(nil)
 }
 
 extension EnvironmentValues {
     var selectedPOVTab: Binding<POVTab> {
         get { self[SelectedPOVTabKey.self] }
         set { self[SelectedPOVTabKey.self] = newValue }
+    }
+
+    var onSaveComplete: () -> Void {
+        get { self[OnSaveCompleteKey.self] }
+        set { self[OnSaveCompleteKey.self] = newValue }
+    }
+
+    var pendingLens: Binding<(mood: Mood, lens: DirectorLens)?> {
+        get { self[PendingLensKey.self] }
+        set { self[PendingLensKey.self] = newValue }
     }
 }
 
