@@ -12,12 +12,11 @@ import SwiftData
 struct RecordingView: View {
     @Environment(\.localModelContainer) private var localContainer: ModelContainer?
     @Binding var hideTabBar: Bool
-   
+    @Binding var pendingLens: (mood: Mood, lens: DirectorLens)?
     
     var body: some View {
         let context: ModelContext = {
             if let c = localContainer { return c.mainContext }
-            // Fallback — should never happen in production
             let fallback = try! ModelContainer(
                 for: Schema([RecordingSessionModel.self, RecordedClipModel.self]),
                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)
@@ -25,7 +24,9 @@ struct RecordingView: View {
             return fallback.mainContext
         }()
         RecordingViewInner(session: RecordingSession(modelContext: context),
-                           hideTabBar: $hideTabBar)
+                                  hideTabBar: $hideTabBar,
+                                  pendingLens: $pendingLens)
+        
     }
 }
 
@@ -35,13 +36,13 @@ private struct RecordingViewInner: View {
     @StateObject var session: RecordingSession
     @StateObject private var camera = CameraManager()
     @Binding var hideTabBar: Bool
-    @Environment(\.pendingLens) private var pendingLens
+    @Binding var pendingLens: (mood: Mood, lens: DirectorLens)?
     @State private var selectedMood: Mood          = POVData.moods[0]
     @State private var selectedLens: DirectorLens? = nil
 
     @Environment(\.selectedPOVTab) private var selectedTab
     @Environment(\.onSaveComplete) private var onSaveComplete
-    
+
     @State private var showDiscardSheet     = false
     @State private var showWrapSheet        = false
     @State private var navigateToVideo      = false
@@ -67,6 +68,9 @@ private struct RecordingViewInner: View {
             .onChange(of: selectedMood) { _ in handleMoodChange() }
             .onChange(of: selectedLens) { handleLensChange($0) }
             .onAppear { handleAppear() }
+            .onChange(of: pendingLens?.lens.id) { _ in
+                if pendingLens != nil { handleAppear() }
+            }
     }
 
     // MARK: - Root Stack
@@ -85,14 +89,19 @@ private struct RecordingViewInner: View {
         if let lens = selectedLens, POVData.hasLook(for: lens) {
             Button("Save with look") {
                 camera.bakeFilterOnExport = true
+                session.recordedAspectRatio = camera.aspectRatio
                 navigateToVideo = true
             }
             Button("Save raw (no filter)") {
                 camera.bakeFilterOnExport = false
+                session.recordedAspectRatio = camera.aspectRatio
                 navigateToVideo = true
             }
         } else {
-            Button("Save") { navigateToVideo = true }
+            Button("Save") {
+                session.recordedAspectRatio = camera.aspectRatio
+                navigateToVideo = true
+            }
         }
         Button("Resume", role: .cancel) {}
     }
@@ -106,6 +115,8 @@ private struct RecordingViewInner: View {
 
     private func handlePhaseChange(_ newPhase: SessionPhase) {
         if newPhase == .wrapping {
+            // Capture the current aspect ratio before navigating
+            session.recordedAspectRatio = camera.aspectRatio
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 navigateToVideo = true
             }
@@ -114,7 +125,6 @@ private struct RecordingViewInner: View {
 
     private func handleNavigationChange(_ isNavigating: Bool) {
         withAnimation { hideTabBar = isNavigating }
-
         if !isNavigating && (session.isWrapping || session.isShooting) {
             withAnimation { session.markSavedAndReset() }
             selectedLens = POVData.lenses(for: selectedMood).first
@@ -133,46 +143,34 @@ private struct RecordingViewInner: View {
     }
 
     private func handleAppear() {
-        if let pending = pendingLens.wrappedValue {
+        if let pending = pendingLens {  // ← was pendingLens.wrappedValue
             if let mood = POVData.moods.first(where: { $0.name == pending.mood.name }) {
                 selectedMood = mood
-                // Match by name, not identity — DirectorLens.id is a new UUID each call
-                if let lens = POVData.lenses(for: mood).first(where: { $0.name == pending.lens.name }) {
-                    selectedLens = lens
-                    camera.setLook(POVData.look(for: lens))
-                }
             }
-            pendingLens.wrappedValue = nil
+            let matchedLens = POVData.moods
+                .flatMap { POVData.lenses(for: $0) }
+                .first { $0.name == pending.lens.name }
+
+            if let lens = matchedLens {
+                selectedLens = lens
+                camera.setLook(POVData.look(for: lens))
+            } else {
+                selectedLens = POVData.lenses(for: selectedMood).first
+                if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
+            }
+
+            pendingLens = nil  // ← was pendingLens.wrappedValue = nil
             return
         }
-         if session.isWrapping {
-             session.reset()
-            selectedLens = POVData.lenses(for: selectedMood).first
-            if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
-            return
-        }
-        if session.isShooting || session.isWrapping,
-           let mood = POVData.moods.first(where: { $0.name == session.activeMoodName }) {
-            selectedMood = mood
-            selectedLens = POVData.lenses(for: mood).first { $0.name == session.activeLensName }
-        } else {
-            selectedLens = POVData.lenses(for: selectedMood).first
-        }
-        if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
-        
-        let hasValidClips = session.clips.contains { FileManager.default.fileExists(atPath: $0.url.path) }
-        if (session.isShooting || session.isWrapping) && !hasValidClips {
-            session.markSavedAndReset()
-            selectedLens = POVData.lenses(for: selectedMood).first
-            if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
-            return
-        }
+
+        // MARK: Restore active session state
         if session.isWrapping {
             session.reset()
             selectedLens = POVData.lenses(for: selectedMood).first
             if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
             return
         }
+
         if session.isShooting || session.isWrapping,
            let mood = POVData.moods.first(where: { $0.name == session.activeMoodName }) {
             selectedMood = mood
@@ -181,8 +179,15 @@ private struct RecordingViewInner: View {
             selectedLens = POVData.lenses(for: selectedMood).first
         }
         if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
+
+        let hasValidClips = session.clips.contains { FileManager.default.fileExists(atPath: $0.url.path) }
+        if (session.isShooting || session.isWrapping) && !hasValidClips {
+            session.markSavedAndReset()
+            selectedLens = POVData.lenses(for: selectedMood).first
+            if let lens = selectedLens { camera.setLook(POVData.look(for: lens)) }
+        }
     }
-    
+
     // MARK: - Main Content Stack
     @ViewBuilder
     private var mainContent: some View {
@@ -208,7 +213,6 @@ private struct RecordingViewInner: View {
     }
 
     // MARK: - Bottom Stack
-    // NOTE: No POVTabBar here — ContentView owns the persistent one
     @ViewBuilder
     private var bottomStack: some View {
         if !$session.clips.isEmpty && !camera.isRecording {
@@ -234,7 +238,6 @@ private struct RecordingViewInner: View {
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
         lensAndRecordRow
-            // Extra pad so record row clears the persistent tab bar
             .padding(.bottom, bottomSafeAreaPad + 80)
     }
 
@@ -274,7 +277,6 @@ private struct RecordingViewInner: View {
         }
     }
 
-    // MARK: - Top bar bottom padding
     private var topBarBottomPad: CGFloat { session.isIdle ? 10 : 0 }
 
     // MARK: - Camera Background
@@ -315,7 +317,6 @@ private struct RecordingViewInner: View {
         }
     }
 
-    // MARK: - Aspect Ratio Frame Calculator
     private func frameForRatio(_ ratio: CameraManager.AspectRatio, in size: CGSize) -> CGSize {
         switch ratio {
         case .ratioFull:  return size

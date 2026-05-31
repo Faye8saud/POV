@@ -63,14 +63,12 @@ struct VideoView: View {
 
                 Spacer()
 
-                // MARK: Date
                 Text(formattedDate.uppercased())
                     .font(.system(size: 12, weight: .regular, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.45))
                     .kerning(1.5)
                     .padding(.bottom, 14)
 
-                // MARK: Video Player
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(.black)
@@ -100,7 +98,6 @@ struct VideoView: View {
                 .frame(height: 420)
                 .padding(.horizontal, 24)
 
-                // MARK: Meta
                 VStack(spacing: 6) {
                     Text("A film of your day")
                         .font(.custom("Georgia-Italic", size: 20))
@@ -118,7 +115,6 @@ struct VideoView: View {
 
                 Spacer()
 
-                // MARK: CTA
                 Button {
                     playerHolder.player.pause()
                     navigateToReflection = true
@@ -137,13 +133,13 @@ struct VideoView: View {
                 .opacity(merger.isMerging ? 0.4 : 1)
             }
 
-            // Hidden NavigationLink to ReflectionView
             NavigationLink(
                 destination: ReflectionView(
                     lens: lens,
                     date: date,
                     mergedVideoURL: merger.mergedURL,
                     moodName: clips.first?.moodName ?? "",
+                    existingEntry: nil,
                     onSaveComplete: onSaveComplete
                 ),
                 isActive: $navigateToReflection
@@ -173,10 +169,8 @@ struct VideoView: View {
         }
     }
 
-    // MARK: - Save & Skip (no reflection)
     private func saveEntryAndGoToArchive(answer1: String, answer2: String) {
         guard let context = cloudContext else { return }
-
         let entry = DayEntry(
             date: date,
             moodName: clips.first?.moodName ?? "",
@@ -229,21 +223,13 @@ final class VideoMerger: ObservableObject {
     func merge(clips: [RecordedClipModel], aspectRatio: CameraManager.AspectRatio = .ratio5_3) {
         guard !clips.isEmpty, mergedURL == nil else { return }
         isMerging = true
-
         let sorted = clips.sorted { $0.date < $1.date }
-
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 let url = try await Self.mergeClips(sorted, aspectRatio: aspectRatio)
-                await MainActor.run {
-                    self?.mergedURL = url
-                    self?.isMerging = false
-                }
+                await MainActor.run { self?.mergedURL = url; self?.isMerging = false }
             } catch {
-                await MainActor.run {
-                    self?.error = error
-                    self?.isMerging = false
-                }
+                await MainActor.run { self?.error = error; self?.isMerging = false }
             }
         }
     }
@@ -252,155 +238,173 @@ final class VideoMerger: ObservableObject {
         _ clips: [RecordedClipModel],
         aspectRatio: CameraManager.AspectRatio
     ) async throws -> URL {
-        let composition = AVMutableComposition()
 
+        let composition = AVMutableComposition()
         guard
-            let videoTrack = composition.addMutableTrack(
-                withMediaType: .video,
-                preferredTrackID: kCMPersistentTrackID_Invalid
-            ),
-            let audioTrack = composition.addMutableTrack(
-                withMediaType: .audio,
-                preferredTrackID: kCMPersistentTrackID_Invalid
-            )
+            let videoTrack = composition.addMutableTrack(withMediaType: .video,
+                                                         preferredTrackID: kCMPersistentTrackID_Invalid),
+            let audioTrack = composition.addMutableTrack(withMediaType: .audio,
+                                                         preferredTrackID: kCMPersistentTrackID_Invalid)
         else { throw MergeError.trackCreationFailed }
 
-        var currentTime = CMTime.zero
-        var naturalSize = CGSize(width: 1920, height: 1080)
-        var storedTransform = CGAffineTransform.identity
+        // MARK: Pass 1 — collect metadata
+        struct ClipMeta {
+            let asset: AVURLAsset
+            let duration: CMTime
+            let naturalSize: CGSize
+            let preferredTransform: CGAffineTransform
+            let nominalFPS: Float
+        }
 
+        var metas: [ClipMeta] = []
         for clip in clips {
-            let asset = AVURLAsset(url: clip.url)
+            let asset    = AVURLAsset(url: clip.url)
             let duration = try await asset.load(.duration)
-            let timeRange = CMTimeRange(start: .zero, duration: duration)
-
-            if let srcVideo = try await asset.loadTracks(withMediaType: .video).first {
-                try videoTrack.insertTimeRange(timeRange, of: srcVideo, at: currentTime)
-                if currentTime == .zero {
-                    let size = try await srcVideo.load(.naturalSize)
-                    let transform = try await srcVideo.load(.preferredTransform)
-                    // Only use if valid
-                    if size.width > 0 && size.height > 0 {
-                        naturalSize = size
-                        storedTransform = transform
-                    }
-                }
-            }
-
-            if let srcAudio = try await asset.loadTracks(withMediaType: .audio).first {
-                try audioTrack.insertTimeRange(timeRange, of: srcAudio, at: currentTime)
-            }
-
-            currentTime = CMTimeAdd(currentTime, duration)
+            guard let srcVideo = try await asset.loadTracks(withMediaType: .video).first else { continue }
+            let size      = try await srcVideo.load(.naturalSize)
+            let transform = try await srcVideo.load(.preferredTransform)
+            let fps       = try await srcVideo.load(.nominalFrameRate)
+            metas.append(ClipMeta(asset: asset, duration: duration,
+                                  naturalSize: size, preferredTransform: transform,
+                                  nominalFPS: fps))
         }
+        guard !metas.isEmpty else { throw MergeError.trackCreationFailed }
 
-        let videoComposition = try await buildVideoComposition(
-            for: composition,
-            naturalSize: naturalSize,
-            preferredTransform: storedTransform,
-            aspectRatio: aspectRatio
-        )
+        // Master = the normal-speed clip with the largest pixel area.
+        // Its naturalSize and transform define the composition canvas.
+        let master = metas
+            .filter { $0.nominalFPS <= 60 }
+            .max(by: { $0.naturalSize.width * $0.naturalSize.height < $1.naturalSize.width * $1.naturalSize.height })
+            ?? metas[0]
 
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let outputURL = docs.appendingPathComponent("pov_\(UUID().uuidString).mov")
-        try? FileManager.default.removeItem(at: outputURL)
+        let masterNaturalSize = master.naturalSize
+        let masterTransform   = master.preferredTransform
 
-        guard let exporter = AVAssetExportSession(
-            asset: composition,
-            presetName: AVAssetExportPresetHighestQuality
-        ) else { throw MergeError.exporterCreationFailed }
+        // MARK: Compute output (render) size from master
+        let masterIsPortrait = abs(masterTransform.b) == 1 && abs(masterTransform.c) == 1
+        let masterDisplay: CGSize = masterIsPortrait
+            ? CGSize(width: masterNaturalSize.height, height: masterNaturalSize.width)
+            : masterNaturalSize
 
-        exporter.outputURL = outputURL
-        exporter.outputFileType = .mov
-        exporter.shouldOptimizeForNetworkUse = false
-        exporter.videoComposition = videoComposition
-
-        await exporter.export()
-
-        guard exporter.status == .completed else {
-            throw exporter.error ?? MergeError.exportFailed
-        }
-
-        return outputURL
-    }
-
-    private static func buildVideoComposition(
-        for composition: AVMutableComposition,
-        naturalSize: CGSize,
-        preferredTransform: CGAffineTransform,
-        aspectRatio: CameraManager.AspectRatio
-    ) async throws -> AVMutableVideoComposition {
-
-        guard let videoTrack = composition.tracks(withMediaType: .video).first else {
-            throw MergeError.trackCreationFailed
-        }
-
-        let t = preferredTransform
-        let isPortrait = abs(t.b) == 1 && abs(t.c) == 1
-
-        let displaySize: CGSize = isPortrait
-            ? CGSize(width: naturalSize.height, height: naturalSize.width)
-            : naturalSize
-
-        // Guard against zero/invalid dimensions
-        guard displaySize.width > 0 && displaySize.height > 0 else {
-            throw MergeError.trackCreationFailed
-        }
-
-        let correctedTransform: CGAffineTransform
-        if t.a == 0 && t.b == 1 && t.c == -1 && t.d == 0 {
-            correctedTransform = CGAffineTransform(a: 0, b: 1, c: -1, d: 0,
-                                                   tx: naturalSize.height, ty: 0)
-        } else if t.a == 0 && t.b == -1 && t.c == 1 && t.d == 0 {
-            correctedTransform = CGAffineTransform(a: 0, b: -1, c: 1, d: 0,
-                                                   tx: 0, ty: naturalSize.width)
-        } else if t.a == -1 && t.b == 0 && t.c == 0 && t.d == -1 {
-            correctedTransform = CGAffineTransform(a: -1, b: 0, c: 0, d: -1,
-                                                   tx: naturalSize.width, ty: naturalSize.height)
-        } else {
-            correctedTransform = .identity
-        }
-
-        let outputSize: CGSize = {
+        let renderSize: CGSize = {
+            let w = masterDisplay.width, h = masterDisplay.height
             switch aspectRatio {
-            case .ratioFull, .ratio16_9:
-                return displaySize
-            case .ratio5_3:
-                let targetHeight = displaySize.width * (3.0 / 5.0)
-                return CGSize(width: displaySize.width,
-                              height: min(targetHeight, displaySize.height))
-            case .ratio1_1:
-                let side = min(displaySize.width, displaySize.height)
-                return CGSize(width: side, height: side)
+            case .ratioFull, .ratio16_9: return CGSize(width: w, height: h)
+            case .ratio5_3:              return CGSize(width: w, height: min(w * (3.0/5.0), h))
+            case .ratio1_1:              let s = min(w,h); return CGSize(width: s, height: s)
             }
         }()
 
-        // Guard against zero output size
-        guard outputSize.width > 0 && outputSize.height > 0 else {
-            throw MergeError.trackCreationFailed
+        let cropOffsetX = (masterDisplay.width  - renderSize.width)  / 2
+        let cropOffsetY = (masterDisplay.height - renderSize.height) / 2
+
+        // MARK: Pass 2 — insert clips, stretch slow-mo, build per-segment instructions
+        var currentTime  = CMTime.zero
+        var instructions = [AVMutableVideoCompositionInstruction]()
+
+        for meta in metas {
+            let clipTimeRange = CMTimeRange(start: .zero, duration: meta.duration)
+            let isSlowMo      = meta.nominalFPS > 60
+
+            guard let srcVideo = try await meta.asset.loadTracks(withMediaType: .video).first else { continue }
+            try videoTrack.insertTimeRange(clipTimeRange, of: srcVideo, at: currentTime)
+
+            let effectiveDuration: CMTime
+            if isSlowMo {
+                let factor    = Float64(meta.nominalFPS) / 30.0
+                let stretched = CMTimeMultiplyByFloat64(meta.duration, multiplier: factor)
+                videoTrack.scaleTimeRange(
+                    CMTimeRange(start: currentTime, duration: meta.duration),
+                    toDuration: stretched
+                )
+                effectiveDuration = stretched
+            } else {
+                effectiveDuration = meta.duration
+                if let srcAudio = try await meta.asset.loadTracks(withMediaType: .audio).first {
+                    try? audioTrack.insertTimeRange(clipTimeRange, of: srcAudio, at: currentTime)
+                }
+            }
+
+            // Build orientation-correcting transform for THIS clip's natural size
+            let t = meta.preferredTransform
+            var orientTransform: CGAffineTransform
+            if      t.a == 0 && t.b == 1  && t.c == -1 && t.d == 0 {
+                orientTransform = CGAffineTransform(a: 0, b: 1, c: -1, d: 0,
+                                                    tx: meta.naturalSize.height, ty: 0)
+            } else if t.a == 0 && t.b == -1 && t.c == 1  && t.d == 0 {
+                orientTransform = CGAffineTransform(a: 0, b: -1, c: 1, d: 0,
+                                                    tx: 0, ty: meta.naturalSize.width)
+            } else if t.a == -1 && t.b == 0  && t.c == 0  && t.d == -1 {
+                orientTransform = CGAffineTransform(a: -1, b: 0, c: 0, d: -1,
+                                                    tx: meta.naturalSize.width,
+                                                    ty: meta.naturalSize.height)
+            } else {
+                orientTransform = .identity
+            }
+
+            // Display size of this clip after orientation
+            let clipIsPortrait = abs(t.b) == 1 && abs(t.c) == 1
+            let clipDisplay = clipIsPortrait
+                ? CGSize(width: meta.naturalSize.height, height: meta.naturalSize.width)
+                : meta.naturalSize
+
+            // Scale this clip to fill the master display canvas (aspect-fill)
+            let scaleX = masterDisplay.width  / max(clipDisplay.width,  1)
+            let scaleY = masterDisplay.height / max(clipDisplay.height, 1)
+            let scale  = max(scaleX, scaleY)          // aspect-fill: pick the larger scale
+
+            // Apply scale to the orientation transform's matrix and translation
+            var scaled = orientTransform
+            scaled.a  *= scale; scaled.b  *= scale
+            scaled.c  *= scale; scaled.d  *= scale
+            scaled.tx *= scale; scaled.ty *= scale
+
+            // Centre within the master canvas after scaling
+            let scaledW = clipDisplay.width  * scale
+            let scaledH = clipDisplay.height * scale
+            scaled.tx += (masterDisplay.width  - scaledW) / 2
+            scaled.ty += (masterDisplay.height - scaledH) / 2
+
+            // Shift for crop
+            scaled.tx -= cropOffsetX
+            scaled.ty -= cropOffsetY
+
+            let segRange    = CMTimeRange(start: currentTime, duration: effectiveDuration)
+            let instruction = AVMutableVideoCompositionInstruction()
+            instruction.timeRange = segRange
+            let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
+            layer.setTransform(scaled, at: .zero)
+            instruction.layerInstructions = [layer]
+            instructions.append(instruction)
+
+            currentTime = CMTimeAdd(currentTime, effectiveDuration)
         }
 
-        let cropOffsetX = (displaySize.width  - outputSize.width)  / 2
-        let cropOffsetY = (displaySize.height - outputSize.height) / 2
-
-        var finalTransform = correctedTransform
-        finalTransform.tx -= cropOffsetX
-        finalTransform.ty -= cropOffsetY
-
-        let videoComposition = AVMutableVideoComposition()
-        videoComposition.renderSize = outputSize
+        // Assemble final video composition from per-segment instructions
+        let videoComposition           = AVMutableVideoComposition()
+        videoComposition.renderSize    = renderSize
         videoComposition.frameDuration = CMTimeMake(value: 1, timescale: 30)
+        videoComposition.instructions  = instructions
 
-        let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = CMTimeRange(start: .zero, duration: composition.duration)
+        // MARK: Export
+        let docs      = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let outputURL = docs.appendingPathComponent("pov_\(UUID().uuidString).mov")
+        try? FileManager.default.removeItem(at: outputURL)
 
-        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
-        layerInstruction.setTransform(finalTransform, at: .zero)
+        guard let exporter = AVAssetExportSession(asset: composition,
+                                                  presetName: AVAssetExportPresetHighestQuality)
+        else { throw MergeError.exporterCreationFailed }
 
-        instruction.layerInstructions = [layerInstruction]
-        videoComposition.instructions = [instruction]
+        exporter.outputURL                   = outputURL
+        exporter.outputFileType              = .mov
+        exporter.shouldOptimizeForNetworkUse = false
+        exporter.videoComposition            = videoComposition
 
-        return videoComposition
+        await exporter.export()
+        guard exporter.status == .completed else {
+            throw exporter.error ?? MergeError.exportFailed
+        }
+        return outputURL
     }
 
     enum MergeError: Error {

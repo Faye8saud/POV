@@ -399,6 +399,9 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var countdownMode: CountdownMode = .off
     @Published var countdownRemaining: Int = 0
 
+    // Exposed so RecordingSession can read it when creating RecordedClipModel
+    var currentClipIsSlowMotion: Bool = false
+
     var isCountingDown: Bool { countdownRemaining > 0 }
 
     // MARK: - Aspect Ratio
@@ -503,7 +506,6 @@ final class CameraManager: NSObject, ObservableObject {
             }
 
             self.session.commitConfiguration()
-            // Fix orientation on initial setup
             self.fixVideoOrientation()
             self.session.startRunning()
         }
@@ -545,6 +547,8 @@ final class CameraManager: NSObject, ObservableObject {
             .appendingPathExtension("mov")
 
         let wantSlowMo = isSlowMotionEnabled
+        // Snapshot so the delegate callback knows what this clip was recorded as
+        currentClipIsSlowMotion = wantSlowMo
 
         sessionQueue.async { [weak self] in
             guard let self else { return }
@@ -553,9 +557,7 @@ final class CameraManager: NSObject, ObservableObject {
                 self.applyFrameRate(fps: 120, to: self.videoDeviceInput?.device)
             }
 
-            // Ensure portrait orientation before recording starts
             self.fixVideoOrientation()
-
             self.movieOutput.startRecording(to: outputURL, recordingDelegate: self)
 
             DispatchQueue.main.async {
@@ -662,19 +664,12 @@ final class CameraManager: NSObject, ObservableObject {
                 self.videoDeviceInput = newInput
             }
             self.session.commitConfiguration()
-
-            // ── Fix orientation after flip ──────────────────────────────────
-            // AVCaptureSession resets the video connection orientation when the
-            // input changes, defaulting to landscape on some devices. Force
-            // portrait here so the preview and recorded file stay upright.
             self.fixVideoOrientation()
 
             DispatchQueue.main.async { self.cameraPosition = newPosition }
         }
     }
 
-    /// Forces all video connections (preview + movie output) to portrait orientation.
-    /// Must be called on sessionQueue.
     private func fixVideoOrientation() {
         let portraitOrientation = AVCaptureVideoOrientation.portrait
         for output in session.outputs {
@@ -684,7 +679,6 @@ final class CameraManager: NSObject, ObservableObject {
                 }
             }
         }
-        // Also fix the preview layer connection if present
         if let previewConnection = session.connections.first(where: {
             $0.isVideoOrientationSupported
         }) {
@@ -782,15 +776,15 @@ extension CameraManager: AVCaptureFileOutputRecordingDelegate {
                     didFinishRecordingTo outputFileURL: URL,
                     from connections: [AVCaptureConnection],
                     error: Error?) {
-        if isSlowMotionEnabled {
+        if currentClipIsSlowMotion {
             sessionQueue.async { [weak self] in
                 self?.restoreFrameRate(on: self?.videoDeviceInput?.device)
             }
         }
-        
+
         let completion = clipSaveCompletion
         clipSaveCompletion = nil
-        
+
         let url = error == nil ? outputFileURL : nil
         DispatchQueue.main.async {
             completion?(url)

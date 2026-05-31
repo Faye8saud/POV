@@ -20,24 +20,28 @@ struct ContentView: View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
 
-                Group {
-                    switch selectedTab {
-                    case .record:
-                        NavigationStack {
-                            RecordingView(hideTabBar: $hideTabBar)
-                        }
-                        .transition(.opacity)
-
-                    case .home:
-                        HomeView()
-                            .transition(.opacity)
-
-                    case .archive:
-                        NavigationStack {
-                            CalendarView(initialEntryDate: savedEntryDate)
-                        }
-                        .transition(.opacity)
+                // Keep ALL tab views alive at all times so onAppear/onChange
+                // fire correctly when pendingLens is set from HomeView.
+                // Visibility is controlled by opacity — not by recreating views.
+                ZStack {
+                    NavigationStack {
+                        RecordingView(hideTabBar: $hideTabBar, pendingLens: $pendingLens)
                     }
+                    .opacity(selectedTab == .record ? 1 : 0)
+                    .allowsHitTesting(selectedTab == .record)
+                    .zIndex(selectedTab == .record ? 1 : 0)
+
+                    HomeView()
+                        .opacity(selectedTab == .home ? 1 : 0)
+                        .allowsHitTesting(selectedTab == .home)
+                        .zIndex(selectedTab == .home ? 1 : 0)
+
+                    NavigationStack {
+                        CalendarView(initialEntryDate: savedEntryDate)
+                    }
+                    .opacity(selectedTab == .archive ? 1 : 0)
+                    .allowsHitTesting(selectedTab == .archive)
+                    .zIndex(selectedTab == .archive ? 1 : 0)
                 }
                 .animation(.easeInOut(duration: 0.25), value: selectedTab)
 

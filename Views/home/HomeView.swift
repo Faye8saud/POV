@@ -80,7 +80,7 @@ struct HomeView: View {
 
                     // MARK: - Insights Section
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("A new insight is ready!")
+                        Text("Your generated insights will appear here!")
                             .font(.custom("Georgia-Italic", size: 16))
                             .foregroundColor(.white)
                             .padding(.horizontal, 24)
@@ -88,16 +88,17 @@ struct HomeView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 16) {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text("\u{201C}This week you reached for slower lenses than the week before.\u{201D}")
+                           /*       Text("\u{201C}This week you reached for slower lenses than the week before.\u{201D}")
                                         .font(.custom("Georgia-Italic", size: 18))
                                         .foregroundColor(.white)
                                         .lineSpacing(4)
-
+*/
                                     Spacer()
 
-                                    Text("-compared to last week")
+                                /*    Text("-compared to last week")
                                         .font(.system(size: 11))
                                         .foregroundColor(.gray)
+                                 */
                                 }
                                 .padding(20)
                                 .frame(width: 165, height: 250, alignment: .topLeading)
@@ -114,7 +115,7 @@ struct HomeView: View {
                                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                                 )
 
-                                VStack { Spacer() }
+                             /*   VStack { Spacer() }
                                     .frame(width: 165, height: 250)
                                     .background(
                                         LinearGradient(
@@ -127,9 +128,10 @@ struct HomeView: View {
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 20)
                                             .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                                    )
+                                    )  */
                             }
                             .padding(.horizontal, 24)
+                            
                         }
                     }
 

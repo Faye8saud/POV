@@ -14,9 +14,9 @@ struct ReflectionView: View {
     let date: Date
     let mergedVideoURL: URL?
     let moodName: String
+    let existingEntry: DayEntry?
     let onSaveComplete: () -> Void
-    
-    // Use both — cloudContext for CloudKit, modelContext as guaranteed fallback
+
     @Environment(\.cloudModelContext) private var cloudContext
     @Environment(\.modelContext) private var modelContext
     @Environment(\.selectedPOVTab) private var selectedTab
@@ -88,13 +88,18 @@ struct ReflectionView: View {
                     .animation(.spring(response: 0.4, dampingFraction: 0.82), value: step)
 
                 if step == 1 {
-                    YesNoSelector(selection: $answer1)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 36)
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .move(edge: .trailing)),
-                            removal:   .opacity.combined(with: .move(edge: .leading))
-                        ))
+                    // Tapping Yes or No auto-advances — no Next button needed
+                    YesNoSelector(selection: $answer1) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            withAnimation { step = 2 }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 36)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .trailing)),
+                        removal:   .opacity.combined(with: .move(edge: .leading))
+                    ))
                 } else {
                     ZStack(alignment: .topLeading) {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -131,46 +136,38 @@ struct ReflectionView: View {
 
                 Spacer()
 
-                Button { handleContinue() } label: {
-                    Group {
-                        if isSaving {
-                            ProgressView().tint(Color(white: 0.06))
-                        } else {
-                            Text(step == 1 ? "Next" : "Save & finish")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color(white: 0.06))
+                // Save button only shown on step 2
+                if step == 2 {
+                    Button { saveAndFinish() } label: {
+                        Group {
+                            if isSaving {
+                                ProgressView().tint(Color(white: 0.06))
+                            } else {
+                                Text("Save & finish")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(Color(white: 0.06))
+                            }
                         }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(Color.white)
+                        .cornerRadius(27)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.white)
-                    .cornerRadius(27)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 100)
+                    .disabled(isSaving)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 52)
-                .disabled(isSaving)
-                .opacity(step == 1 && answer1.isEmpty ? 0.4 : 1)
-                .disabled(step == 1 && answer1.isEmpty)
             }
         }
         .navigationBarHidden(true)
         .animation(.spring(response: 0.4, dampingFraction: 0.82), value: step)
         .onTapGesture {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-            .navigationBarHidden(true)
-            .animation(.spring(response: 0.4, dampingFraction: 0.82), value: step)
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
     }
 
     // MARK: - Actions
-
-    private func handleContinue() {
-        if step == 1 {
-            withAnimation { step = 2 }
-        } else {
-            saveAndFinish()
-        }
-    }
 
     private func handleSkip() {
         if step == 1 {
@@ -184,27 +181,31 @@ struct ReflectionView: View {
 
     private func saveAndFinish() {
         guard !isSaving else { return }
-        
-        // Dismiss keyboard first, then save after a short delay so it doesn't lag
+
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        
+
         isSaving = true
 
-        let entry = DayEntry(
-            date: date,
-            moodName: moodName,
-            directorName: lens.name,
-            directorStyle: lens.styleDescription,
-            reflectionAnswer1: answer1,
-            reflectionAnswer2: answer2,
-            mergedVideoURL: mergedVideoURL?.lastPathComponent ?? ""
-        )
-
         let context = cloudContext ?? modelContext
-        context.insert(entry)
-        try? context.save()
 
-        // Small delay so keyboard finishes animating down before navigation fires
+        if let existing = existingEntry {
+            existing.reflectionAnswer1 = answer1
+            existing.reflectionAnswer2 = answer2
+            try? context.save()
+        } else {
+            let entry = DayEntry(
+                date: date,
+                moodName: moodName,
+                directorName: lens.name,
+                directorStyle: lens.styleDescription,
+                reflectionAnswer1: answer1,
+                reflectionAnswer2: answer2,
+                mergedVideoURL: mergedVideoURL?.lastPathComponent ?? ""
+            )
+            context.insert(entry)
+            try? context.save()
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             onSaveComplete()
         }
@@ -215,6 +216,7 @@ struct ReflectionView: View {
 private struct YesNoSelector: View {
 
     @Binding var selection: String
+    let onSelect: () -> Void   // called after selection, triggers auto-advance
 
     var body: some View {
         HStack(spacing: 16) {
@@ -225,6 +227,7 @@ private struct YesNoSelector: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                         selection = option
                     }
+                    onSelect()
                 } label: {
                     Text(option)
                         .font(.system(size: 17, weight: .medium))

@@ -9,18 +9,41 @@ import SwiftData
 import AVKit
 
 // MARK: - ArchiveView
-// Pushed from CalendarView. Shows all DayEntry records for a given MonthGroup.
-
 struct ArchiveView: View {
 
     let month: MonthGroup
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.cloudModelContext) private var cloudContext
 
-    // Entries already filtered by CalendarView's MonthGroup
-    private var entries: [DayEntry] {
-        month.entries.sorted { $0.date > $1.date }
+    @State private var entryPendingDelete: DayEntry? = nil
+    @State private var selectedEntry: DayEntry? = nil
+
+    // Live query filtered to this month — updates instantly when entries are deleted
+    @Query private var allEntries: [DayEntry]
+
+    init(month: MonthGroup) {
+        self.month = month
+        // Filter to entries whose date falls within this month/year
+        let cal = Calendar.current
+        let startComponents = DateComponents(year: month.year, month: cal.component(.month, from: month.entries.first?.date ?? Date()))
+        // Use month name + year to build the date range
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        let refDate = formatter.date(from: "\(month.monthName) \(month.year)") ?? Date()
+        let start = cal.date(from: cal.dateComponents([.year, .month], from: refDate)) ?? refDate
+        let end   = cal.date(byAdding: .month, value: 1, to: start) ?? refDate
+        _allEntries = Query(
+            filter: #Predicate<DayEntry> { entry in
+                entry.date >= start && entry.date < end
+            },
+            sort: \.date,
+            order: .reverse
+        )
     }
+
+    private var entries: [DayEntry] { allEntries }
 
     var body: some View {
         ZStack {
@@ -32,30 +55,93 @@ struct ArchiveView: View {
                 if entries.isEmpty {
                     emptyState
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 12) {
-                            ForEach(entries) { entry in
-                                NavigationLink(destination: ArchiveDetailView(entry: entry)) {
-                                    ArchiveEntryRow(entry: entry)
+                    List {
+                        ForEach(entries) { entry in
+                            ArchiveEntryRow(entry: entry)
+                                .contentShape(Rectangle())
+                                .onTapGesture { selectedEntry = entry }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .none) {
+                                        entryPendingDelete = entry
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    .tint(.red)
                                 }
-                                .buttonStyle(.plain)
-                            }
+                                .listRowInsets(EdgeInsets(top: 6, leading: 24, bottom: 6, trailing: 24))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 8)
-                        .padding(.bottom, 120) // clears persistent tab bar
+                        // Bottom padding row so last entry clears the tab bar
+                        Color.clear
+                            .frame(height: 100)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
 
                 Spacer()
             }
         }
         .navigationBarHidden(true)
+        .navigationDestination(item: $selectedEntry) { entry in
+            ArchiveDetailView(entry: entry)
+        }
+        .alert("Delete this film?", isPresented: .init(
+            get: { entryPendingDelete != nil },
+            set: { if !$0 { entryPendingDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let entry = entryPendingDelete {
+                    deleteEntry(entry)
+                }
+                entryPendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                entryPendingDelete = nil
+            }
+        } message: {
+            Text("This will permanently remove the film and its reflection. This can't be undone.")
+        }
+    }
 
+    // MARK: - Delete
+    private func deleteEntry(_ entry: DayEntry) {
+        // Delete the merged video file from disk
+        if !entry.mergedVideoURL.isEmpty {
+            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let filename: String
+            if entry.mergedVideoURL.contains("/"),
+               let url = URL(string: entry.mergedVideoURL), url.scheme != nil {
+                filename = url.lastPathComponent
+            } else if entry.mergedVideoURL.contains("/") {
+                filename = (entry.mergedVideoURL as NSString).lastPathComponent
+            } else {
+                filename = entry.mergedVideoURL
+            }
+            let fileURL = docs.appendingPathComponent(filename)
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+
+        let context = cloudContext ?? modelContext
+        context.delete(entry)
+        try? context.save()
+    }
+
+    // Derived from live @Query entries so it updates immediately after deletion
+    private var liveDominantMood: Mood? {
+        var counts: [String: Int] = [:]
+        for entry in entries {
+            counts[entry.moodName, default: 0] += 1
+        }
+        guard let topName = counts.max(by: { $0.value < $1.value })?.key else { return nil }
+        return POVData.moods.first { $0.name == topName }
     }
 
     // MARK: - Header
-
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -84,9 +170,9 @@ struct ArchiveView: View {
                 .foregroundColor(Color("text 1"))
                 .padding(.horizontal, 20)
                 .padding(.top, 4)
+                .padding(.bottom , 14)
 
-            // Mood color strip
-            if let dominant = month.dominantMood {
+            if let dominant = liveDominantMood {
                 moodStrip(dominant: dominant)
                     .padding(.horizontal, 20)
                     .padding(.top, 6)
@@ -135,7 +221,6 @@ struct ArchiveView: View {
     }
 
     // MARK: - Empty State
-
     private var emptyState: some View {
         VStack(spacing: 12) {
             Spacer()
@@ -152,7 +237,6 @@ struct ArchiveView: View {
 }
 
 // MARK: - Archive Entry Row
-
 struct ArchiveEntryRow: View {
     let entry: DayEntry
 
@@ -167,7 +251,6 @@ struct ArchiveEntryRow: View {
     var body: some View {
         HStack(spacing: 14) {
 
-            // Thumbnail
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(mood?.color.opacity(0.25) ?? Color("cards"))
@@ -241,7 +324,6 @@ struct ArchiveEntryRow: View {
 }
 
 // MARK: - Archive Entry Detail Sheet
-
 struct ArchiveEntryDetailView: View {
     let entry: DayEntry
     @Environment(\.dismiss) private var dismiss
@@ -300,7 +382,6 @@ struct ArchiveEntryDetailView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 28)
 
-                    // Video player if available
                     if let url = entry.videoURL {
                         VideoPlayer(player: AVPlayer(url: url))
                             .frame(height: 280)
@@ -309,7 +390,6 @@ struct ArchiveEntryDetailView: View {
                             .padding(.bottom, 28)
                     }
 
-                    // Reflections
                     if entry.hasReflection {
                         VStack(alignment: .leading, spacing: 24) {
                             if !entry.reflectionAnswer1.isEmpty {
@@ -345,7 +425,6 @@ struct ArchiveEntryDetailView: View {
 }
 
 // MARK: - Video Thumbnail
-
 private struct VideoThumbnailView: View {
     let url: URL
     @State private var thumbnail: UIImage? = nil

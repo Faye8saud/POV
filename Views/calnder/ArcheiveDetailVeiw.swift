@@ -168,12 +168,14 @@ struct ArchiveDetailView: View {
                 }
             }
 
+            // Passes existingEntry: entry so ReflectionView updates in place — no duplication
             NavigationLink(
                 destination: ReflectionView(
                     lens: lens,
                     date: entry.date,
                     mergedVideoURL: videoURL,
                     moodName: entry.moodName,
+                    existingEntry: entry,
                     onSaveComplete: { navigateToReflection = false }
                 ),
                 isActive: $navigateToReflection
