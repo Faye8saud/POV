@@ -1,7 +1,7 @@
 {
   "moods": [
     {
-      "name": "Tender",
+      "name": "Peaceful",
       "description": "soft edges, warm light, quiet attention",
       "color": "#A76D78",
       "accentColor": "#F2B5C0",
@@ -17,12 +17,7 @@
             "Capture a moment of waiting or stillness",
             "Let silence be part of the scene"
           ],
-          "tags": [
-            "slow",
-            "intimate",
-            "nostalgic",
-            "feminine gaze"
-          ],
+          "tags": ["slow", "intimate", "nostalgic", "feminine gaze"],
           "brief": "Look for the light that makes ordinary things feel like memories. Stay far away. Let silence be part of the frame.",
           "question1": "Did you find a moment today that already felt like a memory?",
           "question2": "What was the quietest part of your day, and what was happening in it?"
@@ -38,12 +33,7 @@
             "Find a color in your day and let it dominate the frame",
             "Capture someone from behind or at a distance"
           ],
-          "tags": [
-            "longing",
-            "color",
-            "blur",
-            "poetic"
-          ],
+          "tags": ["longing", "color", "blur", "poetic"],
           "brief": "Find one color that belongs to today, and let it follow you. Watch the world slow down, even when it shouldn't.",
           "question1": "Was there something today you felt but didn't say out loud?",
           "question2": "If today had a color, what was it, and why?"
@@ -59,12 +49,7 @@
             "Look for small acts of care between people",
             "Film someone doing something ordinary, from a respectful distance"
           ],
-          "tags": [
-            "family",
-            "routine",
-            "quiet",
-            "observational"
-          ],
+          "tags": ["family", "routine", "quiet", "observational"],
           "brief": "Notice the small acts of care between people — yours, theirs. The meaning is in what is done, not in what is said.",
           "question1": "Did someone care for you today, even in a small way?",
           "question2": "What ordinary thing did you do today that someone, somewhere, would have called love?"
@@ -80,12 +65,7 @@
             "Find a small detail that tells a whole story",
             "Capture eye contact, or the absence of it"
           ],
-          "tags": [
-            "gaze",
-            "tenderness",
-            "precise",
-            "feminist"
-          ],
+          "tags": ["gaze", "tenderness", "precise", "feminist"],
           "brief": "Pay attention to who you looked at today, and who looked at you. Let one small detail tell the whole story.",
           "question1": "Did you feel truly seen by someone today?",
           "question2": "Who or what caught your eye today, and what did you not say about it?"
@@ -93,7 +73,7 @@
       ]
     },
     {
-      "name": "Restless",
+      "name": "Driven",
       "description": "close, unsettled, vivid, searching",
       "color": "#5F5390",
       "accentColor": "#9FA8DA",
@@ -109,12 +89,7 @@
             "Capture repetition — something done over and over",
             "Film from an uncomfortable angle"
           ],
-          "tags": [
-            "obsession",
-            "close-up",
-            "visceral",
-            "handheld"
-          ],
+          "tags": ["obsession", "close-up", "visceral", "handheld"],
           "brief": "Get close. Notice what your hands kept doing today, what you kept returning to. Let the camera breathe with you.",
           "question1": "Did you keep doing something today without quite knowing why?",
           "question2": "What were you doing when you weren't doing anything?"
@@ -130,12 +105,7 @@
             "Capture something broken, worn, or imperfect",
             "Let the frame be incomplete — cut off heads, cut off hands"
           ],
-          "tags": [
-            "fragmented",
-            "poetic",
-            "texture",
-            "interior"
-          ],
+          "tags": ["fragmented", "poetic", "texture", "interior"],
           "brief": "Find an object today that holds a feeling you haven't named. Let the frame stay incomplete.",
           "question1": "Did something small carry more weight today than it should have?",
           "question2": "What stayed with you longer than it should have today, and where did it come from?"
@@ -151,12 +121,7 @@
             "Let music play while you film — feel the contrast",
             "Film yourself or someone mid-feeling, not explaining it"
           ],
-          "tags": [
-            "emotional",
-            "dramatic",
-            "personal",
-            "music-driven"
-          ],
+          "tags": ["emotional", "dramatic", "personal", "music-driven"],
           "brief": "Don't explain the feeling. Let it be loud, even if no one else can see it. Film the moment, not the reason.",
           "question1": "Did you feel something today that was bigger than the moment that caused it?",
           "question2": "What did you almost say today, and to whom?"
@@ -172,12 +137,7 @@
             "Use a very still shot of something that should be moving",
             "Find beauty in an uncomfortable place"
           ],
-          "tags": [
-            "symmetry",
-            "tension",
-            "controlled",
-            "unsettling"
-          ],
+          "tags": ["symmetry", "tension", "controlled", "unsettling"],
           "brief": "Find something that feels slightly off today. Stay in the discomfort. Look at it longer than feels right.",
           "question1": "Did something feel a little wrong today, even if you couldn't say why?",
           "question2": "What did you choose not to look at today?"
@@ -185,7 +145,7 @@
       ]
     },
     {
-      "name": "Wandering",
+      "name": "Curious",
       "description": "curious, open, unhurried, drifting",
       "color": "#688181",
       "accentColor": "#A8C5B5",
@@ -201,12 +161,7 @@
             "Capture a stranger's world without disturbing it",
             "Find something that makes you want to ask a question"
           ],
-          "tags": [
-            "curious",
-            "warm",
-            "discovery",
-            "street"
-          ],
+          "tags": ["curious", "warm", "discovery", "street"],
           "brief": "Follow your curiosity. Stop where it pulls you. Film what others walked past without noticing.",
           "question1": "Did you go somewhere today just because you were curious?",
           "question2": "What surprised you today, even briefly?"
@@ -222,12 +177,7 @@
             "Film the in-between moments of your day",
             "Let the camera roll longer than feels comfortable"
           ],
-          "tags": [
-            "dialogue",
-            "real-time",
-            "transitions",
-            "leisurely"
-          ],
+          "tags": ["dialogue", "real-time", "transitions", "leisurely"],
           "brief": "Stay in the in-between today. Don't rush from one thing to the next. Film a transition, not a destination.",
           "question1": "Did you let yourself linger today, even briefly?",
           "question2": "What was the longest conversation you had with yourself today?"
@@ -243,12 +193,7 @@
             "Film yourself or someone moving through space from far away",
             "Look for signs, roads, windows — in-between spaces"
           ],
-          "tags": [
-            "landscape",
-            "solitude",
-            "wide",
-            "melancholic"
-          ],
+          "tags": ["landscape", "solitude", "wide", "melancholic"],
           "brief": "Find a wide, open space today and let it sit. Don't fill the frame. Let the horizon do the talking.",
           "question1": "Did you spend time alone today on purpose?",
           "question2": "Where did your mind go when nothing was asking for it?"
@@ -264,12 +209,7 @@
             "Look for irony or absurdity in an everyday scene",
             "Film with complete stillness — no movement, no explanation"
           ],
-          "tags": [
-            "deadpan",
-            "slow",
-            "absurd",
-            "cool"
-          ],
+          "tags": ["deadpan", "slow", "absurd", "cool"],
           "brief": "Find a moment of waiting today and stay in it. Let the boring part be interesting. Don't cut away.",
           "question1": "Was there a moment of waiting today that was secretly better than the thing you were waiting for?",
           "question2": "What's something ordinary that you saw today and quietly liked?"
@@ -277,7 +217,7 @@
       ]
     },
     {
-      "name": "Charged",
+      "name": "Motivated",
       "description": "urgent, intentional, weighted, sharp",
       "color": "#A62228",
       "accentColor": "#C23441",
@@ -293,12 +233,7 @@
             "Use cuts that feel urgent — don't linger",
             "Film a decision point — a door, a choice, a moment before"
           ],
-          "tags": [
-            "urgency",
-            "scale",
-            "time",
-            "monumental"
-          ],
+          "tags": ["urgency", "scale", "time", "monumental"],
           "brief": "Treat today like it matters. Find the scale in small things. Capture the moment before a decision.",
           "question1": "Did you make a decision today that quietly mattered?",
           "question2": "What were you choosing today, even if no one else could see the choice?"
@@ -314,12 +249,7 @@
             "Capture order or disorder — things arranged or falling apart",
             "Film a process — something being done step by step"
           ],
-          "tags": [
-            "precise",
-            "cold",
-            "controlled",
-            "artificial light"
-          ],
+          "tags": ["precise", "cold", "controlled", "artificial light"],
           "brief": "Notice what's deliberate in your day. Watch what's arranged, and what's falling apart. Stay still.",
           "question1": "Did something today go exactly the way you planned?",
           "question2": "What detail did you notice today that no one else would have?"
@@ -335,12 +265,7 @@
             "Capture a moment of confrontation or first contact",
             "Find the silence in your environment and hold it"
           ],
-          "tags": [
-            "awe",
-            "silence",
-            "vast",
-            "slow-burn"
-          ],
+          "tags": ["awe", "silence", "vast", "slow-burn"],
           "brief": "Find the silence today and hold it. Let something be vast. Wait longer than feels comfortable.",
           "question1": "Did you feel small today, in a good way?",
           "question2": "What were you sitting with today that didn't have a name?"
@@ -356,12 +281,7 @@
             "Use a slow tracking shot — follow someone walking",
             "Film an environment that reveals character — a desk, a room"
           ],
-          "tags": [
-            "character",
-            "long take",
-            "operatic",
-            "power"
-          ],
+          "tags": ["character", "long take", "operatic", "power"],
           "brief": "Look at someone today longer than feels normal — yourself in a mirror, or a stranger across the room.",
           "question1": "Did you notice someone today who was holding something in?",
           "question2": "Who had power in your day today, and how could you tell?"
@@ -369,7 +289,7 @@
       ]
     },
     {
-      "name": "Playful",
+      "name": "Joyful",
       "description": "curious, bright, surprising, alive",
       "color": "#CA792B",
       "accentColor": "#C89452",
@@ -385,12 +305,7 @@
             "Film a collection of objects arranged deliberately",
             "Use a slow pan left or right — perfectly level"
           ],
-          "tags": [
-            "symmetry",
-            "color palette",
-            "deadpan",
-            "whimsical"
-          ],
+          "tags": ["symmetry", "color palette", "deadpan", "whimsical"],
           "brief": "Find perfect symmetry today and film it straight on. Treat ordinary things like they were placed on purpose.",
           "question1": "Did you arrange anything today, even just a small thing on a desk?",
           "question2": "What did you notice today that someone else designed without thinking?"
@@ -406,12 +321,7 @@
             "Use your hands or body as part of the shot",
             "Create something — fold, stack, arrange — and film it"
           ],
-          "tags": [
-            "handmade",
-            "surreal",
-            "lo-fi",
-            "imagination"
-          ],
+          "tags": ["handmade", "surreal", "lo-fi", "imagination"],
           "brief": "Make something today that didn't exist before. Even small. Even silly. Film it like it's a magic trick.",
           "question1": "Did you make something today, even something tiny?",
           "question2": "When did you last feel a small spark of wonder, and what set it off?"
@@ -427,12 +337,7 @@
             "Capture a moment of social awkwardness or tension",
             "Look for irony — something that doesn't quite fit"
           ],
-          "tags": [
-            "contrast",
-            "social",
-            "genre-mixing",
-            "ironic"
-          ],
+          "tags": ["contrast", "social", "genre-mixing", "ironic"],
           "brief": "Find a contrast today that no one else seemed to notice. Capture something from an angle that surprises you.",
           "question1": "Did anything today feel slightly absurd in a way that made you smile?",
           "question2": "What two things did you see today that didn't belong together?"
@@ -448,12 +353,7 @@
             "Capture a repeated action and speed it up mentally",
             "Find a moment where sound and image land at the same time"
           ],
-          "tags": [
-            "rhythm",
-            "editing",
-            "music",
-            "kinetic"
-          ],
+          "tags": ["rhythm", "editing", "music", "kinetic"],
           "brief": "Move with rhythm today. Match a beat with what you film. Let sound and image land together.",
           "question1": "Did you find your rhythm today?",
           "question2": "What was the soundtrack of your day, even if no music was playing?"
